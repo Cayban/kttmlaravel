@@ -16,13 +16,33 @@ class IpRecord extends Model
 
     protected $fillable = [
         'record_id',
+        'registration_number',
         'ip_title',
         'category',
-        'owner_inventor_summary',
+        'class_of_work',
+        'date_creation',
+        'date_registered_deposited',
         'campus',
-        'status',
-        'date_registered',
-        'ipophl_id',
+        'college',
+        'program',
+        'owner_inventor_summary',
         'gdrive_link',
+        'remarks',
+        'status',
+        'ipophl_id',
     ];
+
+    // ensure gdrive_link stored or returned always includes a scheme so it behaves
+    // as an external URL rather than a relative route. adding this accessor means
+    // model->gdrive_link and JSON serialization are both safe.
+    public function getGdriveLinkAttribute($value)
+    {
+        if (empty($value)) {
+            return null;
+        }
+        if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+            return $value;
+        }
+        return 'https://' . $value;
+    }
 }

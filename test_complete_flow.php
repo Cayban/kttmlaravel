@@ -33,7 +33,7 @@ $payload = [
     'owner' => $record->owner_inventor_summary, // No change
     'campus' => 'Manila',  // CHANGED
     'status' => 'Registered',  // CHANGED
-    'registered' => $record->date_registered,
+    'registered' => $record->date_registered_deposited,
     'ipophl_id' => $record->ipophl_id,
     'gdrive_link' => $record->gdrive_link,
     'remarks' => 'Updated remarks for testing',  // CHANGED
@@ -89,7 +89,7 @@ $record->campus = $payload['campus'];
 $record->status = $payload['status'];
 $record->remarks = $payload['remarks'];
 if (!empty($payload['registered'])) {
-    $record->date_registered = $payload['registered'];
+    $record->date_registered_deposited = $payload['registered'];
 }
 if (!empty($payload['ipophl_id'])) {
     $record->ipophl_id = $payload['ipophl_id'];

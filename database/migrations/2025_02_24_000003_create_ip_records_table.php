@@ -13,15 +13,20 @@ return new class extends Migration
     {
         Schema::create('ip_records', function (Blueprint $table) {
             $table->string('record_id')->primary();
+            $table->string('registration_number')->nullable();
             $table->string('ip_title');
             $table->string('category')->nullable();
-            $table->string('owner_inventor_summary')->nullable();
+            $table->string('class_of_work')->nullable();
+            $table->date('date_creation')->nullable();
+            $table->date('date_registered_deposited')->nullable();
             $table->string('campus')->nullable();
-            $table->string('status')->nullable();
-            $table->date('date_registered')->nullable();
-            $table->string('ipophl_id')->nullable();
+            $table->string('college')->nullable();
+            $table->string('program')->nullable();
+            $table->string('owner_inventor_summary')->nullable();
             $table->text('gdrive_link')->nullable();
             $table->text('remarks')->nullable();
+            $table->string('status')->nullable();
+            $table->string('ipophl_id')->nullable();
             $table->timestamps();
             $table->timestamp('archived_at')->nullable();
             

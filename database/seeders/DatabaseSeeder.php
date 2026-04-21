@@ -34,7 +34,7 @@ class DatabaseSeeder extends Seeder
             'ipophl_id' => 'IPOPHL-001-2026',
             'gdrive_link' => 'https://drive.google.com/file/d/test123',
             'remarks' => 'This is a test patent record for testing the change timeline system.',
-            'date_registered' => now(),
+            'date_registered_deposited' => now(),
         ]);
 
         IpRecord::create([
@@ -47,7 +47,7 @@ class DatabaseSeeder extends Seeder
             'ipophl_id' => 'IPOPHL-002-2026',
             'gdrive_link' => 'https://drive.google.com/file/d/test456',
             'remarks' => 'Original literary work - fictional narrative.',
-            'date_registered' => now(),
+            'date_registered_deposited' => now(),
         ]);
     }
 }

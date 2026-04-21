@@ -19,7 +19,7 @@ class ExportRecordsTest extends TestCase
             'owner_inventor_summary' => 'Alice',
             'campus' => 'Lipa',
             'status' => 'Filed',
-            'date_registered' => now()->toDateString(),
+            'date_registered_deposited' => now()->toDateString(),
         ]);
 
         $response = $this->get('/records/export');
@@ -39,7 +39,7 @@ class ExportRecordsTest extends TestCase
             'owner_inventor_summary' => 'Bob',
             'campus' => 'Lipa',
             'status' => 'Registered',
-            'date_registered' => '2025-01-01',
+            'date_registered_deposited' => '2025-01-01',
         ]);
         IpRecord::factory()->create([
             'record_id' => 'KTTM-003',
@@ -48,7 +48,7 @@ class ExportRecordsTest extends TestCase
             'owner_inventor_summary' => 'Carol',
             'campus' => 'Lipa',
             'status' => 'Filed',
-            'date_registered' => '2026-01-01',
+            'date_registered_deposited' => '2026-01-01',
         ]);
 
         $response = $this->get('/records/export?start=2025-01-01&end=2025-01-01');
