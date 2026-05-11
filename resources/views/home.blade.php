@@ -3726,5 +3726,6 @@
 </script>
 @endif
 
+@include('partials.session-timeout')
 </body>
 </html>

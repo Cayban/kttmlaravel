@@ -1780,9 +1780,9 @@
           <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>
         </svg>
       </div>
-      <h3 class="service-name">Provide Training</h3>
-      <p class="service-desc">Technical training and assistance in IP protection, licensing, and commercialization for the university community.</p>
-      <span class="service-tag">Training</span>
+      <h3 class="service-name">Provide Assistance</h3>
+<p class="service-desc">Technical assistance and support in IP protection, licensing, and commercialization for the university community.</p>
+<span class="service-tag">Support</span>
     </div>
     <div class="service-card">
       <div class="service-num">04</div>

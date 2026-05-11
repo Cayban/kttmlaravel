@@ -2454,5 +2454,6 @@
   setInterval(pollOnlineUsers, 30000);
 
 </script>
+@include('partials.session-timeout')
 </body>
 </html>

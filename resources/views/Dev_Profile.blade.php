@@ -1291,5 +1291,6 @@
   document.getElementById('newNameInput').addEventListener('keypress', e => { if(e.key==='Enter') submitName(); });
   document.getElementById('confirmPw').addEventListener('keypress',  e => { if(e.key==='Enter') submitPassword(); });
 </script>
+@include('partials.session-timeout')
 </body>
 </html>

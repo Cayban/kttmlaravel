@@ -3653,5 +3653,6 @@
 })();
 </script>
 
+@include('partials.session-timeout')
 </body>
 </html>

@@ -3206,5 +3206,6 @@ window.addEventListener('resize', function() {
 })();
 </script>
 
+@include('partials.session-timeout')
 </body>
 </html>
