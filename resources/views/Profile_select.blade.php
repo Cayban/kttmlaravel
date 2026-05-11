@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>KTTM — Select Profile</title>
+<link rel="icon" type="image/png" href="{{ asset('images/KTTMLOGOFAV-512.png') }}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -619,7 +620,7 @@
       $avatarImage = $profile->avatar_image ?? null;
       $designation = $profile->custom_role ?? '';
     @endphp
-    <div class="profile-card" onclick="openPasswordModal({{ $profile->id }}, '{{ addslashes($profile->name) }}', '{{ $initials }}', '{{ $profile->avatar_color }}', '{{ $avatarImage ? asset('storage/avatars/' . $avatarImage) : '' }}', '{{ addslashes($designation) }}')">
+    <div class="profile-card" data-profile-id="{{ $profile->id }}" onclick="openPasswordModal({{ $profile->id }}, '{{ addslashes($profile->name) }}', '{{ $initials }}', '{{ $profile->avatar_color }}', '{{ $avatarImage ? asset('storage/avatars/' . $avatarImage) : '' }}', '{{ addslashes($designation) }}')">
       <!-- Glow -->
       <div class="card-glow" style="background: radial-gradient(ellipse 80% 60% at 50% 0%, {{ $glowColor }}22 0%, transparent 70%);"></div>
 
@@ -686,6 +687,11 @@
       </div>
     </div>
 
+    <div style="display:flex;align-items:center;gap:8px;margin:4px 0 2px;justify-content:center;">
+      <input type="checkbox" id="pwRememberMe" style="width:15px;height:15px;accent-color:#a52c30;cursor:pointer;">
+      <label for="pwRememberMe" style="font-size:0.78rem;color:#94a3b8;cursor:pointer;user-select:none;">Remember this profile</label>
+    </div>
+
     <div class="pw-error" id="pwError">Incorrect password. Please try again.</div>
 
     <button class="pw-submit" id="pwSubmit">
@@ -699,6 +705,29 @@
 
 <script>
   let selectedProfileId = null;
+
+  // Auto-open password modal for remembered profile
+  (function () {
+    const remembered = document.cookie.split('; ').find(r => r.startsWith('kttm_remember_profile='));
+    if (!remembered) return;
+    const profileId = parseInt(remembered.split('=')[1] || '0', 10);
+    if (!profileId) return;
+    // Find the matching profile card and click it
+    setTimeout(() => {
+      const cards = document.querySelectorAll('.profile-card');
+      cards.forEach(card => {
+        const btn = card.querySelector('.profile-select-btn');
+        if (btn && card.dataset.profileId == profileId) {
+          btn.click();
+          // Pre-check the remember box
+          setTimeout(() => {
+            const cb = document.getElementById('pwRememberMe');
+            if (cb) cb.checked = true;
+          }, 100);
+        }
+      });
+    }, 300);
+  })();
 
   function openPasswordModal(id, name, initials, color, photoUrl, designation) {
     selectedProfileId = id;
@@ -766,8 +795,9 @@
           'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
         },
         body: JSON.stringify({
-          profile_id: selectedProfileId,
-          password:   password,
+          profile_id:  selectedProfileId,
+          password:    password,
+          remember_me: document.getElementById('pwRememberMe')?.checked ?? false,
         }),
       });
 
@@ -775,6 +805,13 @@
 
       if (resp.ok && data.success) {
         text.textContent = 'Redirecting…';
+        // Handle remember profile cookie
+        if (document.getElementById('pwRememberMe')?.checked) {
+          const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString();
+          document.cookie = `kttm_remember_profile=${selectedProfileId}; expires=${expires}; path=/; SameSite=Lax`;
+        } else {
+          document.cookie = 'kttm_remember_profile=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        }
         window.location.href = data.redirect || '/home';
       } else {
         errEl.classList.add('show');

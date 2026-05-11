@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="csrf-token" content="{{ csrf_token() }}" />
   <title>KTTM — Calendar</title>
+  <link rel="icon" type="image/png" href="{{ asset('images/KTTMLOGOFAV-512.png') }}">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
@@ -337,14 +338,22 @@
 
     /* ════ CONTENT ════ */
     .content {
-      padding: clamp(14px, 2.5vw, 24px) var(--pad-x);
-      flex: 1;
-      width: 100%;
-      max-width: var(--shell-max);
-      margin: 0 auto;
-      box-sizing: border-box;
-      background: var(--bg) url('{{ asset("images/abstractBGIMAGE12.png") }}') no-repeat right center;
-      background-size: cover;
+  padding: clamp(14px, 2.5vw, 24px) var(--pad-x);
+  flex: 1;
+  width: 100%;
+  max-width: var(--shell-max);
+  margin: 0 auto;
+  box-sizing: border-box;
+  background-color: #EEE9E9;
+  background-image: linear-gradient(rgba(165,44,48,.055) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(165,44,48,.055) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+    @media (max-width: 640px) {
+      .content {
+        background-position: center top;
+        background-size: auto 100%;
+      }
     }
 
     /* ════ SUMMARY STRIP ════ */
@@ -958,7 +967,7 @@
     </div>
   </div>
 
-  <nav class="sidebar-nav">
+  <nav class="sidebar-nav" id="tutorialCalendarSidebar">
 
     <a href="{{ $urlDashboard }}" class="nav-item">
       <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -1025,7 +1034,7 @@
         <div class="page-sub">Tasks, deadlines &amp; scheduled activities</div>
       </div>
     </div>
-    <div class="topbar-right">
+    <div class="topbar-right" id="tutorialCalendarTopActions">
       <button type="button" class="btn-howto" id="howToUseBtn" title="How to Use">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         <span class="btn-howto-label">How to Use</span>
@@ -1047,7 +1056,7 @@
   <div class="content">
 
     {{-- SUMMARY STRIP --}}
-    <div class="summary-strip fu fu1">
+    <div class="summary-strip fu fu1" id="tutorialCalendarSummary">
 
       <div class="sum-card sc-deadline">
         <div class="sum-icon">
@@ -1103,9 +1112,9 @@
     <div class="page-grid">
 
       {{-- ═ CALENDAR ═ --}}
-      <div class="cal-card fu fu2">
+      <div class="cal-card fu fu2" id="tutorialCalendarCard">
 
-        <div class="cal-head">
+        <div class="cal-head" id="tutorialCalendarMonthNav">
           <button type="button" class="cal-nav" id="prevMonth">&#8249;</button>
           <div class="cal-month-wrap">
             <div class="cal-month-name" id="calMonthName">—</div>
@@ -1129,7 +1138,7 @@
 
         <div class="days-grid" id="calDaysGrid"></div>
 
-        <div class="cal-legend">
+        <div class="cal-legend" id="tutorialCalendarLegend">
           <span class="legend-lbl">Key&nbsp;—</span>
           <div class="legend-item"><div class="legend-pip" style="background:var(--c-deadline)"></div>Deadline</div>
           <div class="legend-item"><div class="legend-pip" style="background:var(--c-reg)"></div>Registration</div>
@@ -1186,7 +1195,7 @@
         </div>
 
         {{-- Recent Tasks --}}
-        <div class="panel fu fu4">
+        <div class="panel fu fu4" id="tutorialRecentTasksPanel">
           <div class="panel-head">
             <div>
               <div class="panel-title">Recent Tasks</div>
@@ -1214,7 +1223,7 @@
 
 {{-- DAY MODAL --}}
 <div class="modal-overlay" id="dayModal">
-  <div class="modal-box">
+  <div class="modal-box" id="tutorialDayModalBox">
     <div class="modal-head">
       <div>
         <div class="modal-eyebrow">Daily Schedule</div>
@@ -1830,7 +1839,323 @@ window.addEventListener('resize', function() {
   if (window.innerWidth > 768) closeMobileSidebar();
 });
 
+window.KTTMCalendarTutorialApi = {
+  openDay,
+  closeDay,
+  goToday,
+  renderCal,
+  getState: () => ({ CY, CM, tasks: Array.isArray(tasks) ? tasks.slice() : [] }),
+};
+
 })();
 </script>
+@if(isset($showTutorial) && $showTutorial)
+<style>
+  #kttmTut6Overlay { position: fixed; inset: 0; z-index: 9000; pointer-events: all; }
+  #kttmTut6Svg     { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 9001; pointer-events: none; }
+  #kttmTut6Card {
+    position: fixed; z-index: 9002; background: #fff; border-radius: 18px;
+    padding: 22px 24px 18px; width: min(380px, calc(100vw - 32px));
+    box-shadow: 0 24px 64px rgba(0,0,0,.22), 0 0 0 1px rgba(0,0,0,.06);
+    transition: top .32s cubic-bezier(.4,0,.2,1), left .32s cubic-bezier(.4,0,.2,1), opacity .22s ease;
+  }
+  #kttmTut6Card.tut-hidden { opacity: 0; pointer-events: none; }
+  .tut6-label { font-size: .62rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #A52C30; margin-bottom: 6px; font-family: 'DM Mono', monospace; }
+  .tut6-title { font-size: 1rem; font-weight: 800; color: #0F172A; margin-bottom: 6px; line-height: 1.3; }
+  .tut6-desc  { font-size: .82rem; color: #64748B; line-height: 1.6; margin-bottom: 16px; }
+  .tut6-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .tut6-dots { display: flex; gap: 5px; align-items: center; }
+  .tut6-dot { width: 6px; height: 6px; border-radius: 50%; background: #e2e8f0; transition: background .2s, width .2s; }
+  .tut6-dot.active { background: #A52C30; width: 18px; border-radius: 3px; }
+  .tut6-actions { display: flex; gap: 8px; }
+  .tut6-btn-skip {
+    padding: 8px 14px; border-radius: 10px; border: 1.5px solid #e2e8f0; background: none;
+    font-family: inherit; font-size: .75rem; font-weight: 700; color: #94a3b8; cursor: pointer; transition: all .15s;
+  }
+  .tut6-btn-skip:hover { border-color: #A52C30; color: #A52C30; }
+  .tut6-btn-back {
+    padding: 8px 14px; border-radius: 10px; border: 1.5px solid #e2e8f0; background: #fff;
+    font-family: inherit; font-size: .75rem; font-weight: 700; color: #64748B; cursor: pointer; transition: all .15s;
+  }
+  .tut6-btn-back:hover:not(:disabled) { border-color: #A52C30; color: #A52C30; }
+  .tut6-btn-back:disabled { opacity: .45; cursor: not-allowed; }
+  .tut6-btn-next {
+    padding: 8px 20px; border-radius: 10px; border: none;
+    background: linear-gradient(135deg, #A52C30, #7E1F23);
+    font-family: inherit; font-size: .75rem; font-weight: 800; color: #fff; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(165,44,48,.3); transition: transform .15s, box-shadow .15s;
+  }
+  .tut6-btn-next:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(165,44,48,.4); }
+  #kttmTut6Pulse {
+    position: fixed; z-index: 9003; border-radius: 14px;
+    border: 2.5px solid #F0C860; pointer-events: none;
+    animation: tut6Pulse 1.8s ease-out infinite;
+    transition: all .32s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes tut6Pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(240,200,96,.55); }
+    70%  { box-shadow: 0 0 0 10px rgba(240,200,96,0); }
+    100% { box-shadow: 0 0 0 0 rgba(240,200,96,0); }
+  }
+</style>
+
+<div id="kttmTut6Overlay"></div>
+<svg id="kttmTut6Svg" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <mask id="kttmTut6Mask">
+      <rect width="100%" height="100%" fill="white"/>
+      <rect id="kttmTut6Hole" x="0" y="0" width="0" height="0" rx="14" fill="black"/>
+    </mask>
+  </defs>
+  <rect width="100%" height="100%" fill="rgba(10,14,26,0.72)" mask="url(#kttmTut6Mask)"/>
+</svg>
+<div id="kttmTut6Pulse"></div>
+<div id="kttmTut6Card" class="tut-hidden">
+  <div class="tut6-label" id="kttmTut6Label">Step 1 of 10</div>
+  <div class="tut6-title" id="kttmTut6Title"></div>
+  <div class="tut6-desc" id="kttmTut6Desc"></div>
+  <div class="tut6-footer">
+    <div class="tut6-dots" id="kttmTut6Dots"></div>
+    <div class="tut6-actions">
+      <button class="tut6-btn-skip" id="kttmTut6Skip">Skip tutorial</button>
+      <button class="tut6-btn-back" id="kttmTut6Back" disabled>Back</button>
+      <button class="tut6-btn-next" id="kttmTut6Next">Next</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const STEPS = [
+    {
+      target: 'tutorialCalendarSidebar',
+      title: 'Navigation Sidebar',
+      desc: 'This sidebar is your main page switcher. Calendar is highlighted here, and the same rail lets you jump back to Dashboard, Records, Insights, Profile, or Sign Out.',
+    },
+    {
+      target: 'tutorialCalendarTopActions',
+      title: 'Topbar Actions',
+      desc: 'Use How to Use for the static help guide, Today to jump back to the current month instantly, and Add Task to scroll straight to the task form on the right.',
+    },
+    {
+      target: 'tutorialCalendarSummary',
+      title: 'Summary Strip',
+      desc: 'These cards summarize the page at a glance: deadlines due this month, records still unregistered, pending tasks, and completed tasks. Pending and completed totals update live when you change tasks.',
+    },
+    {
+      target: 'tutorialCalendarMonthNav',
+      title: 'Month Navigation',
+      desc: 'Use the left and right arrows to move across months. The calendar header always shows the active month and year, and the small Today button here snaps the grid back to the present month.',
+    },
+    {
+      target: 'calDaysGrid',
+      title: 'Calendar Grid',
+      desc: 'Each day cell is clickable. Scheduled tasks appear as colored chips on the date, today is highlighted, and overflow is condensed into a +more label when a day has many items.',
+    },
+    {
+      target: 'tutorialCalendarLegend',
+      title: 'Legend and Colors',
+      desc: 'This key explains the chip colors used throughout the page: deadline, registration, review, submission, and completed. The same colors appear in the grid, recent list, and day modal.',
+    },
+    {
+      target: 'addTaskPanel',
+      title: 'Add Task Panel',
+      desc: 'This is the task creation form. Enter a title, choose a date, assign a category, optionally add an author and notes, then save the task directly into the calendar.',
+    },
+    {
+      target: 'catSwatches',
+      title: 'Category Picker',
+      desc: 'These swatches choose the task type before saving. The selected category controls the chip color and label used everywhere else on the page, so pick the one that matches the activity.',
+    },
+    {
+      target: 'tutorialRecentTasksPanel',
+      title: 'Recent Tasks',
+      desc: 'This panel lists the latest scheduled items so you can scan upcoming work quickly. It shows the day, task title, author, and category badge, and completed tasks appear faded for fast status reading.',
+    },
+    {
+      target: 'tutorialDayModalBox',
+      title: 'Day Detail Modal',
+      desc: 'Clicking any date opens this detailed view. From here you can review all tasks for that day, mark them done, delete them, close the modal, or jump into Add Task Here to schedule another item on the same date.',
+      beforeShow: ensureDayModalOpen,
+    },
+  ];
+
+  let current = 0;
+  const TOTAL = STEPS.length;
+  const PAD = 12;
+
+  const overlay = document.getElementById('kttmTut6Overlay');
+  const hole = document.getElementById('kttmTut6Hole');
+  const pulse = document.getElementById('kttmTut6Pulse');
+  const card = document.getElementById('kttmTut6Card');
+  const labelEl = document.getElementById('kttmTut6Label');
+  const titleEl = document.getElementById('kttmTut6Title');
+  const descEl = document.getElementById('kttmTut6Desc');
+  const dotsEl = document.getElementById('kttmTut6Dots');
+  const skipBtn = document.getElementById('kttmTut6Skip');
+  const backBtn = document.getElementById('kttmTut6Back');
+  const nextBtn = document.getElementById('kttmTut6Next');
+
+  function syncNavButtons() {
+    backBtn.disabled = current === 0;
+  }
+
+  function buildDots() {
+    dotsEl.innerHTML = STEPS.map((_, i) =>
+      `<div class="tut6-dot${i === current ? ' active' : ''}"></div>`
+    ).join('');
+  }
+
+  function getApi() {
+    return window.KTTMCalendarTutorialApi || null;
+  }
+
+  function ensureDayModalOpen() {
+    const api = getApi();
+    if (!api) return Promise.resolve();
+
+    const state = api.getState?.();
+    const candidate = (state?.tasks || []).find(t => (t.task_date || '').slice(0, 10));
+    const iso = candidate ? candidate.task_date.slice(0, 10) : new Date().toISOString().slice(0, 10);
+    const [year, month] = iso.split('-').map(Number);
+
+    api.renderCal?.(year, month - 1);
+    return new Promise(resolve => {
+      setTimeout(() => {
+        api.openDay?.(iso);
+        setTimeout(resolve, 220);
+      }, 180);
+    });
+  }
+
+  function closeDayModalIfOpen() {
+    const api = getApi();
+    api?.closeDay?.();
+  }
+
+  function showStep(idx) {
+    const step = STEPS[idx];
+    const proceed = () => {
+      const el = document.getElementById(step.target);
+      if (!el) { goNext(); return; }
+
+      const r = el.getBoundingClientRect();
+      if (r.top < 0 || r.bottom > window.innerHeight) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+        setTimeout(() => positionCard(el, idx), 380);
+      } else {
+        positionCard(el, idx);
+      }
+    };
+
+    if (typeof step.beforeShow === 'function') {
+      Promise.resolve(step.beforeShow()).then(proceed);
+    } else {
+      if (step.target !== 'tutorialDayModalBox') closeDayModalIfOpen();
+      proceed();
+    }
+  }
+
+  function positionCard(el, idx) {
+    const r = el.getBoundingClientRect();
+    const x = Math.floor(r.left - PAD);
+    const y = Math.floor(r.top - PAD);
+    const w = Math.ceil(r.width + PAD * 2);
+    const h = Math.ceil(r.height + PAD * 2);
+
+    hole.setAttribute('x', x);
+    hole.setAttribute('y', y);
+    hole.setAttribute('width', w);
+    hole.setAttribute('height', h);
+    pulse.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px;`;
+
+    labelEl.textContent = `Step ${idx + 1} of ${TOTAL}`;
+    titleEl.textContent = STEPS[idx].title;
+    descEl.textContent = STEPS[idx].desc;
+    nextBtn.textContent = idx === TOTAL - 1 ? 'Finish' : 'Next';
+    syncNavButtons();
+    document.querySelectorAll('.tut6-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
+
+    const cardW = Math.min(380, window.innerWidth - 32);
+    const cardH = card.offsetHeight || 220;
+    const gap = 16;
+    let left = x;
+    let top = y + h + gap;
+
+    if (left + cardW > window.innerWidth - gap) left = window.innerWidth - cardW - gap;
+    if (left < gap) left = gap;
+    if (top + cardH > window.innerHeight - gap) top = y - cardH - gap;
+    if (top < gap) top = gap;
+
+    card.style.cssText += `left:${left}px;top:${top}px;width:${cardW}px;`;
+    card.classList.remove('tut-hidden');
+  }
+
+  async function finishTutorial() {
+    hideOverlay();
+    sessionStorage.setItem('kttm_tut_page', 'profile');
+    window.location.href = '/profile';
+  }
+
+  function goNext() {
+    current++;
+    if (current >= TOTAL) {
+      finishTutorial();
+    } else {
+      showStep(current);
+    }
+  }
+
+  function goBack() {
+    if (current === 0) return;
+    current--;
+    showStep(current);
+  }
+
+  function hideOverlay() {
+    closeDayModalIfOpen();
+    card.classList.add('tut-hidden');
+    overlay.style.display = 'none';
+    document.getElementById('kttmTut6Svg').style.display = 'none';
+    pulse.style.display = 'none';
+  }
+
+  async function dismiss() {
+    hideOverlay();
+    sessionStorage.removeItem('kttm_tut_page');
+    try {
+      await fetch('/tutorial/dismiss', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+      });
+    } catch (e) {}
+  }
+
+  skipBtn.addEventListener('click', dismiss);
+  backBtn.addEventListener('click', goBack);
+  nextBtn.addEventListener('click', goNext);
+
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => showStep(current), 120);
+  });
+
+  function boot() {
+    if (sessionStorage.getItem('kttm_tut_page') !== 'calendar') return;
+    buildDots();
+    showStep(0);
+  }
+
+  if (document.readyState === 'complete') setTimeout(boot, 650);
+  else window.addEventListener('load', () => setTimeout(boot, 650));
+})();
+</script>
+@endif
 </body>
 </html>

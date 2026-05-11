@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="csrf-token" content="{{ csrf_token() }}" />
   <title>KTTM — Records</title>
+  <link rel="icon" type="image/png" href="{{ asset('images/KTTMLOGOFAV-512.png') }}">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -120,14 +121,22 @@
     .sidebar-backdrop.open { display: block; }
 
     .content {
-      padding: clamp(14px, 2.5vw, 24px) var(--pad-x);
-      flex: 1;
-      width: 100%;
-      max-width: var(--shell-max);
-      margin: 0 auto;
-      box-sizing: border-box;
-      background: var(--bg) url('{{ asset("images/abstractBGIMAGE12.png") }}') no-repeat right center;
-      background-size: cover;
+  padding: clamp(14px, 2.5vw, 24px) var(--pad-x);
+  flex: 1;
+  width: 100%;
+  max-width: var(--shell-max);
+  margin: 0 auto;
+  box-sizing: border-box;
+  background-color: #EEE9E9;
+  background-image: linear-gradient(rgba(165,44,48,.055) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(165,44,48,.055) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+    @media (max-width: 640px) {
+      .content {
+        background-position: center top;
+        background-size: auto 100%;
+      }
     }
     /* ── MAIN ── */
     .main-wrap { margin-left: var(--sidebar-w); min-height: 100vh; display: flex; flex-direction: column; }
@@ -509,6 +518,8 @@
     .action-btn.edit:hover { background: var(--maroon2); box-shadow: 0 4px 14px rgba(165,44,48,.35); transform: translateY(-1px); }
     .action-btn.viewBtn { background: var(--maroon-light); color: var(--maroon); border-color: rgba(165,44,48,.2); }
     .action-btn.viewBtn:hover { background: var(--maroon); color: #fff; box-shadow: 0 4px 14px rgba(165,44,48,.35); transform: translateY(-1px); border-color: var(--maroon); }
+    .action-btn.deleteBtn { background: #fff1f2; color: #b91c1c; border-color: #fecdd3; }
+    .action-btn.deleteBtn:hover { background: #b91c1c; color: #fff; border-color: #b91c1c; box-shadow: 0 4px 14px rgba(185,28,28,.28); transform: translateY(-1px); }
 
     .table-footer {
       padding: 12px clamp(12px, 2.5vw, 20px);
@@ -809,6 +820,57 @@
       flex: 0 1 auto;
       max-width: 100%;
     }
+    .btn-danger {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #b91c1c, #991b1b);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 10px 18px;
+      border-radius: 11px;
+      box-shadow: 0 8px 22px rgba(185,28,28,.22);
+      transition: transform .18s, box-shadow .18s, opacity .18s;
+    }
+    .btn-danger:hover { transform: translateY(-1px); box-shadow: 0 12px 26px rgba(185,28,28,.28); }
+    .btn-danger:disabled { opacity: .7; cursor: wait; transform: none; box-shadow: none; }
+    .delete-confirm-shell { display: flex; flex-direction: column; gap: 16px; }
+    .delete-confirm-hero {
+      display: flex; gap: 14px; align-items: flex-start;
+      padding: 16px 18px; border-radius: 16px;
+      background: linear-gradient(180deg, #fff7ed 0%, #fff1f2 100%);
+      border: 1px solid #fed7aa;
+    }
+    .delete-confirm-icon {
+      width: 46px; height: 46px; border-radius: 14px; flex: 0 0 46px;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #ef4444, #b91c1c);
+      color: #fff; box-shadow: 0 10px 22px rgba(185,28,28,.2);
+    }
+    .delete-confirm-title { font-size: 0.95rem; font-weight: 800; letter-spacing: -.2px; margin-bottom: 4px; }
+    .delete-confirm-copy { font-size: 0.78rem; color: #7c2d12; line-height: 1.65; font-weight: 500; }
+    .delete-record-card {
+      border: 1px solid var(--line); border-radius: 14px;
+      background: var(--bg); padding: 14px 16px;
+    }
+    .delete-record-label {
+      font-size: 0.62rem; font-weight: 800; letter-spacing: .16em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 7px;
+    }
+    .delete-record-id {
+      font-family: 'DM Mono', monospace; font-size: 0.74rem;
+      color: var(--maroon); font-weight: 700; margin-bottom: 6px;
+    }
+    .delete-record-name {
+      font-size: 0.94rem; font-weight: 800; color: var(--ink);
+      line-height: 1.35; overflow-wrap: anywhere;
+    }
+    .delete-record-meta { margin-top: 8px; font-size: 0.74rem; color: var(--muted); line-height: 1.55; }
 
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     .form-grid .span-2 { grid-column: span 2; }
@@ -1002,12 +1064,14 @@
   $recent     = $recent     ?? [];
   $allRecords = $allRecords ?? [];
 
-  $campuses = $campuses ?? collect($allRecords)->pluck('campus')->filter()->unique()->sort()->values()->all();
+  $campuses = $campuses ?? collect($allRecords)->pluck('campus')->map(fn($c) => trim((string) $c))->filter()->unique()->sort()->values()->all();
   $types    = collect($allRecords)->pluck('type')->filter()->unique()
                 ->merge(['Copyright', 'Industrial Design', 'Patent', 'Trademark', 'Utility Model'])
                 ->unique()->sort()->values()->all();
-  $statuses = collect($allRecords)->pluck('status')->filter()->unique()
-                ->merge(['Registered', 'Unregistered', 'Recently Filed', 'Close to Expiry'])
+  $statuses = collect($allRecords)->pluck('status')->filter()
+                ->map(fn($status) => $status === 'Recently Filed' ? 'Filed' : $status)
+                ->unique()
+                ->merge(['Registered', 'Unregistered', 'Filed', 'Close to Expiry'])
                 ->unique()->sort()->values()->all();
 
   $urlDashboard = url('/home');
@@ -1066,7 +1130,7 @@
     </div>
   </div>
 
-  <nav class="sidebar-nav">
+  <nav class="sidebar-nav" id="tutorialSidebar">
 
     <a href="{{ $urlDashboard }}" class="nav-item">
       <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -1150,7 +1214,7 @@
           <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
         </svg>
       </div>
-      <a href="{{ $urlNew }}" class="btn-primary" title="Create a new IP record">
+      <a href="{{ $urlNew }}" class="btn-primary" id="tutorialNewRecord" title="Create a new IP record">
         <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         <span class="btn-primary-text">New Record</span>
       </a>
@@ -1162,7 +1226,7 @@
   <div class="content">
 
     {{-- FILTER PANEL --}}
-    <div class="filter-panel fade-up">
+    <div class="filter-panel fade-up" id="tutorialFilterPanel">
       <div class="filter-panel-top">
         <div>
           <div class="filter-eyebrow">
@@ -1199,6 +1263,7 @@
           <label for="filterCampus">Campus</label>
           <select id="filterCampus" class="field-select">
             <option value="">All campus</option>
+            <option value="__none__">— No Campus</option>
             @foreach($campuses as $c)
               <option value="{{ $c }}">{{ $c }}</option>
             @endforeach
@@ -1217,6 +1282,7 @@
           <label for="filterCollege">College</label>
           <select id="filterCollege" class="field-select">
             <option value="">All colleges</option>
+            <option value="__none__">— No College</option>
             @foreach($colleges ?? [] as $college)
               <option value="{{ $college }}">{{ $college }}</option>
             @endforeach
@@ -1226,10 +1292,19 @@
           <label for="filterProgram">Program</label>
           <select id="filterProgram" class="field-select">
             <option value="">All programs</option>
+            <option value="__none__">— No Program</option>
             @foreach($programs ?? [] as $program)
               <option value="{{ $program }}">{{ $program }}</option>
             @endforeach
           </select>
+        </div>
+        <div class="field-wrap">
+          <label for="filterDateStart">Start Date</label>
+          <input id="filterDateStart" class="field-input" type="date">
+        </div>
+        <div class="field-wrap">
+          <label for="filterDateEnd">End Date</label>
+          <input id="filterDateEnd" class="field-input" type="date">
         </div>
       </div>
 
@@ -1244,19 +1319,22 @@
     </div>
 
     {{-- RECORDS GRID --}}
-    <div class="records-table-full">
+    <div class="records-table-full" id="tutorialRecordsTable">
       <div class="table-card fade-up table-card--delayed" style="width:100%;">
         <div class="table-card-header">
           <div>
             <div class="table-card-title">All IP Records</div>
-            <div class="table-card-sub">Client-side filtered · fast search</div>
+            <div class="table-card-sub">
+              <span id="recordCountDisplay">{{ count($allRecords) }} record(s)</span>
+              <span id="recordCountFiltered" style="display:none;"> &mdash; <strong id="recordCountNum">0</strong> shown after filter</span>
+            </div>
           </div>
           <div class="table-card-header-actions">
             <a href="{{ $urlNew }}" class="btn-gold btn-gold-compact" title="Create a new IP record">+ New</a>
           </div>
         </div>
 
-        <div class="table-wrap">
+        <div class="table-wrap" id="mainTableWrap">
           <table id="recordsTable">
             <thead>
               <tr>
@@ -1269,19 +1347,21 @@
                 <th data-col="program" class="record-program">Program</th>
                 <th data-col="classofwork" class="record-classofwork">Class of Work</th>
                 <th data-col="status">Status</th>
+                <th data-col="dateoffiling">Date of Filing</th>
                 <th data-col="datecreated">Date Created</th>
                 <th data-col="registered">Registered</th>
                 <th data-col="nextdue">Next Due</th>
                 <th data-col="validity">Validity</th>
                 <th data-col="regnumber">Reg. Number</th>
                 <th data-col="gdrive" style="min-width:160px;">GDrive</th>
+                <th data-col="remarks" style="min-width:180px;">Remarks</th>
                 <th data-col="actions">Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y" id="mainTableBody">
               @forelse($allRecords as $r)
                 @php
-                  $s = $r['status'] ?? '';
+                  $s = ($r['status'] ?? '') === 'Recently Filed' ? 'Filed' : ($r['status'] ?? '');
                   $badge = match($s) {
                     'Registered'      => 'status-registered',
                     'Under Review'    => 'status-review',
@@ -1290,21 +1370,41 @@
                     'Returned'        => 'status-returned',
                     default           => 'status-default',
                   };
-                  $dr   = $r['registered'] ?? null;
-                  $link = $r['gdrive_link'] ?? null;
-                  $due  = '—'; $validity = '—';
-                  if($dr){
-                    $date = \Carbon\Carbon::parse($dr);
-                    switch(strtolower(trim($r['type'] ?? ''))){
-                      case 'patent':           $due = $date->copy()->addYears(20)->format('M d, Y'); $validity = '20 yrs'; break;
-                      case 'copyright':        $due = $date->copy()->addYears(70)->format('M d, Y'); $validity = '70 yrs'; break;
-                      case 'utility model':    $due = $date->copy()->addYears(10)->format('M d, Y'); $validity = '10 yrs'; break;
-                      case 'industrial design': $due= $date->copy()->addYears(15)->format('M d, Y'); $validity = '15 yrs'; break;
-                      case 'trademark':        $due = $date->copy()->addYears(10)->format('M d, Y'); $validity = '10 yrs'; break;
-                    }
+                  $dr          = $r['registered']    ?? null;
+                  $df          = $r['date_of_filing'] ?? null;
+                  $dc          = $r['date_creation']  ?? null;
+                  $link        = $r['gdrive_link']    ?? null;
+                  $due         = '—'; $validity = '—';
+                  $typeKey     = strtolower(trim($r['type'] ?? ''));
+
+                  switch($typeKey){
+                    case 'patent':
+                      // 20 years from date_creation (Date Patented/Submitted = filing date)
+                      $base = $dc ?? $dr ?? null;
+                      if($base){ $date = \Carbon\Carbon::parse($base); $due = $date->copy()->addYears(20)->format('M d, Y'); $validity = '20 yrs'; }
+                      break;
+                    case 'utility model':
+                      // 7 years from date_creation (Date Filed/Submitted)
+                      $base = $dc ?? $dr ?? null;
+                      if($base){ $date = \Carbon\Carbon::parse($base); $due = $date->copy()->addYears(7)->format('M d, Y'); $validity = '7 yrs'; }
+                      break;
+                    case 'industrial design':
+                      // 5 years from date_creation (Date Filed/Submitted), renewable twice (max 15)
+                      $base = $dc ?? $dr ?? null;
+                      if($base){ $date = \Carbon\Carbon::parse($base); $due = $date->copy()->addYears(5)->format('M d, Y'); $validity = '5 yrs (max 15)'; }
+                      break;
+                    case 'trademark':
+                      // 10 years from registration date, renewable
+                      if($dr){ $date = \Carbon\Carbon::parse($dr); $due = $date->copy()->addYears(10)->format('M d, Y'); $validity = '10 yrs'; }
+                      break;
+                    case 'copyright':
+                      // Life of author + 50 years — no computable expiry
+                      $validity = 'Life+50 yrs'; $due = '—';
+                      break;
                   }
                 @endphp
-                <tr class="record-row" data-remarks="{{ addslashes($r['remarks'] ?? '') }}">
+                <tr class="record-row" data-remarks="{{ addslashes($r['remarks'] ?? '') }}"
+                  {{ $loop->first ? 'id="tutorialFirstRow"' : '' }}>
                   <td class="record-id-cell record-id">{{ $r['id'] ?? '—' }}</td>
                   <td data-col="title" class="record-title-cell record-title"><div class="title-text" title="{{ $r['title'] ?? '—' }}">{{ $r['title'] ?? '—' }}</div></td>
                   <td data-col="category" class="record-type" style="white-space:nowrap;">{{ $r['type'] ?? '—' }}</td>
@@ -1315,6 +1415,9 @@
                   <td data-col="classofwork" class="record-classofwork">{{ $r['class_of_work'] ?? '—' }}</td>
                   <td data-col="status" class="record-status" style="white-space:nowrap;">
                     <span class="status-badge {{ $badge }}">{{ $s ?: '—' }}</span>
+                  </td>
+                  <td data-col="dateoffiling" style="white-space:nowrap;color:var(--muted);font-size:.75rem;">
+                    {{ !empty($r['date_of_filing']) ? \Carbon\Carbon::parse($r['date_of_filing'])->format('M d, Y') : '—' }}
                   </td>
                   <td data-col="datecreated" style="white-space:nowrap;color:var(--muted);font-size:.75rem;">
                     {{ !empty($r['date_creation']) ? \Carbon\Carbon::parse($r['date_creation'])->format('M d, Y') : '—' }}
@@ -1332,12 +1435,13 @@
                       <span style="color:var(--muted);">—</span>
                     @endif
                   </td>
+                  <td data-col="remarks" style="font-size:.75rem;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ $r['remarks'] ?? '' }}">{{ $r['remarks'] ?? '—' }}</td>
                   <td data-col="actions" style="white-space:nowrap;">
                     <div style="display:flex;gap:5px;">
                       <button type="button" class="action-btn printBtn" data-record-id="{{ $r['id'] ?? '' }}">Print</button>
-                      <button type="button" class="action-btn viewBtn" data-record-id="{{ $r['id'] ?? '' }}">View</button>
-                      <button type="button" class="action-btn edit editBtn" data-record-id="{{ $r['id'] ?? '' }}">Edit</button>
-                      <button type="button" class="action-btn printBtn" data-record-id="{{ $r['id'] ?? '' }}">Archive</button>
+                      <button type="button" class="action-btn viewBtn" data-record-id="{{ $r['id'] ?? '' }}" {{ $loop->first ? 'id="tutorialViewBtn"' : '' }}>View</button>
+                      <button type="button" class="action-btn edit editBtn" data-record-id="{{ $r['id'] ?? '' }}" {{ $loop->first ? 'id="tutorialEditBtn"' : '' }}>Edit</button>
+                      <button type="button" class="action-btn deleteBtn" data-record-id="{{ $r['id'] ?? '' }}">Delete</button>
                     </div>
                   </td>
                 </tr>
@@ -1441,6 +1545,14 @@
               <option value="">Select status</option>
               @foreach($statuses as $s)<option value="{{ $s }}">{{ $s }}</option>@endforeach
             </select>
+          </div>
+          <div class="form-field">
+            <label for="editField_date_creation">Date Created</label>
+            <input id="editField_date_creation" type="date">
+          </div>
+          <div class="form-field">
+            <label for="editField_date_of_filing">Date of Filing</label>
+            <input id="editField_date_of_filing" type="date">
           </div>
           <div class="form-field">
             <label for="editField_registered">Date Registered</label>
@@ -1600,29 +1712,103 @@
 
 {{-- ══ DOWNLOAD MODAL ══ --}}
 <div class="modal-overlay" id="downloadModal">
-  <div class="modal-box" style="max-width:420px;">
+  <div class="modal-box" id="tutorialDownloadBox" style="max-width:480px;">
     <div class="modal-header">
       <div class="modal-title-row">
         <div class="modal-label">Export</div>
         <div class="modal-title">Download Records</div>
-        <div class="modal-sub">Choose all records or a date range.</div>
+        <div class="modal-sub">Leave filters blank to download all records.</div>
       </div>
       <button class="modal-close-btn" data-close-download>✕</button>
     </div>
     <div class="modal-body">
       <form id="downloadForm" action="{{ url('/records/export') }}" method="GET">
-        <div style="display:flex;flex-direction:column;gap:12px;">
-          <label class="radio-label"><input type="radio" name="mode" value="all" id="modeAll" checked> All records</label>
-          <label class="radio-label"><input type="radio" name="mode" value="range" id="modeRange"> Filter by date range</label>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px;">
-            <div class="form-field"><label for="downloadStart">From</label><input type="date" name="start" id="downloadStart" disabled></div>
-            <div class="form-field"><label for="downloadEnd">To</label><input type="date" name="end" id="downloadEnd" disabled></div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+
+          <div id="dlCountBanner" style="display:flex;align-items:center;gap:10px;background:var(--maroon-light,#fdf3f3);border:1.5px solid var(--line);border-radius:8px;padding:10px 14px;min-height:42px;">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;color:var(--maroon)">
+              <rect x="1" y="3" width="14" height="2" rx="1" fill="currentColor" opacity=".3"/>
+              <rect x="1" y="7" width="14" height="2" rx="1" fill="currentColor" opacity=".6"/>
+              <rect x="1" y="11" width="9"  height="2" rx="1" fill="currentColor"/>
+            </svg>
+            <span id="dlCountText" style="font-size:.85rem;color:var(--ink);flex:1;">Calculating…</span>
+            <span id="dlCountSpinner" style="font-size:.75rem;color:var(--muted);display:none;">updating…</span>
           </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="form-field">
+              <label for="dlCampus">Campus</label>
+              <select name="campus" id="dlCampus" class="field-select">
+                <option value="">All campuses</option>
+                <option value="__none__">— No Campus</option>
+                @foreach($campuses as $c)
+                  <option value="{{ $c }}">{{ $c }}</option>
+                @endforeach
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="dlStatus">Status</label>
+              <select name="status" id="dlStatus" class="field-select">
+                <option value="">All statuses</option>
+                @foreach($statuses as $st)
+                  <option value="{{ $st }}">{{ $st }}</option>
+                @endforeach
+              </select>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="form-field">
+              <label for="dlType">Category</label>
+              <select name="type" id="dlType" class="field-select">
+                <option value="">All categories</option>
+                @foreach($types as $t)
+                  <option value="{{ $t }}">{{ $t }}</option>
+                @endforeach
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="dlCollege">College</label>
+              <select name="college" id="dlCollege" class="field-select">
+                <option value="">All colleges</option>
+                <option value="__none__">— No College</option>
+                @foreach($colleges ?? [] as $col)
+                  <option value="{{ $col }}">{{ $col }}</option>
+                @endforeach
+              </select>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="form-field">
+              <label for="dlProgram">Program</label>
+              <select name="program" id="dlProgram" class="field-select">
+                <option value="">All programs</option>
+                <option value="__none__">— No Program</option>
+                @foreach($programs ?? [] as $prog)
+                  <option value="{{ $prog }}">{{ $prog }}</option>
+                @endforeach
+              </select>
+            </div>
+            <div>{{-- spacer --}}</div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="form-field">
+              <label for="downloadStart">Date From</label>
+              <input type="date" name="start" id="downloadStart" class="field-input">
+            </div>
+            <div class="form-field">
+              <label for="downloadEnd">Date To</label>
+              <input type="date" name="end" id="downloadEnd" class="field-input">
+            </div>
+          </div>
+
         </div>
       </form>
     </div>
     <div class="modal-footer">
-      <button class="btn-outline" data-close-download>Cancel</button>
+      <button class="btn-outline" id="tutorialDownloadCancel" data-close-download>Cancel</button>
       <button class="btn-primary" id="submitDownloadBtn">Download</button>
     </div>
   </div>
@@ -1648,6 +1834,45 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="deleteConfirmModal">
+  <div class="modal-box" style="max-width:520px;">
+    <div class="modal-header">
+      <div class="modal-title-row">
+        <div class="modal-label">Danger Zone</div>
+        <div class="modal-title">Delete Record</div>
+        <div class="modal-sub">This action permanently removes the selected IP record.</div>
+      </div>
+      <button class="modal-close-btn" data-close-deleteconfirm>✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="delete-confirm-shell">
+        <div class="delete-confirm-hero">
+          <div class="delete-confirm-icon" aria-hidden="true">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.1" viewBox="0 0 24 24">
+              <path d="M3 6h18"/><path d="M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/>
+            </svg>
+          </div>
+          <div>
+            <div class="delete-confirm-title">This cannot be undone.</div>
+            <div class="delete-confirm-copy">The record and its related activity history will be removed permanently. Review the details below before continuing.</div>
+          </div>
+        </div>
+
+        <div class="delete-record-card">
+          <div class="delete-record-label">Selected Record</div>
+          <div class="delete-record-id" id="deleteConfirmRecordId">Record #—</div>
+          <div class="delete-record-name" id="deleteConfirmRecordTitle">Untitled record</div>
+          <div class="delete-record-meta" id="deleteConfirmRecordMeta">Category — • Status —</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn-outline" data-close-deleteconfirm>Cancel</button>
+      <button type="button" class="btn-danger" id="confirmDeleteBtn">Delete Record</button>
+    </div>
+  </div>
+</div>
+
 
 
 <script>
@@ -1661,7 +1886,7 @@
   }
 
   // ── Modal helpers ──
-  const SCROLL_LOCK_MODAL_IDS = ['logoutModal','editSearchModal','editRecordModal','downloadModal','changesModal','howtoModal'];
+  const SCROLL_LOCK_MODAL_IDS = ['logoutModal','editSearchModal','editRecordModal','downloadModal','changesModal','deleteConfirmModal','howtoModal'];
   function syncBodyScrollLock() {
     const sidebarOpen = document.getElementById('mainSidebar')?.classList.contains('mobile-open');
     const anyModal = SCROLL_LOCK_MODAL_IDS.some(id => document.getElementById(id)?.classList.contains('open'));
@@ -1677,12 +1902,13 @@
   document.querySelectorAll('[data-close-editrecord]').forEach(b=>b.addEventListener('click',()=>closeModal('editRecordModal')));
   document.querySelectorAll('[data-close-download]').forEach(b=>b.addEventListener('click',()=>closeModal('downloadModal')));
   document.querySelectorAll('[data-close-changes]').forEach(b=>b.addEventListener('click',()=>closeModal('changesModal')));
-  ['logoutModal','editSearchModal','editRecordModal','downloadModal','changesModal'].forEach(id=>{
+  document.querySelectorAll('[data-close-deleteconfirm]').forEach(b=>b.addEventListener('click',()=>closeModal('deleteConfirmModal')));
+  ['logoutModal','editSearchModal','editRecordModal','downloadModal','changesModal','deleteConfirmModal'].forEach(id=>{
     document.getElementById(id)?.addEventListener('click', e=>{ if(e.target===e.currentTarget) closeModal(id); });
   });
   document.addEventListener('keydown', e=>{
     if(e.key!=='Escape') return;
-    ['logoutModal','editSearchModal','editRecordModal','downloadModal','changesModal','howtoModal'].forEach(closeModal);
+    ['logoutModal','editSearchModal','editRecordModal','downloadModal','changesModal','deleteConfirmModal','howtoModal'].forEach(closeModal);
     closeMobileSidebar();
   });
 
@@ -1692,11 +1918,88 @@
   document.getElementById('howtoCloseBtn')?.addEventListener('click', ()=>closeModal('howtoModal'));
   document.getElementById('howtoModal')?.addEventListener('click', e=>{ if(e.target.id==='howtoModal') closeModal('howtoModal'); });
 
+  // ── Filter field refs (declared here so download handler can use them) ──
+  const q         = document.getElementById('viewAllSearch');
+  const campus    = document.getElementById('filterCampus');
+  const type      = document.getElementById('filterType');
+  const status    = document.getElementById('filterStatus');
+  const hint      = document.getElementById('resultHint');
+  const college   = document.getElementById('filterCollege');
+  const program   = document.getElementById('filterProgram');
+  const dateStart = document.getElementById('filterDateStart');
+  const dateEnd   = document.getElementById('filterDateEnd');
+
   // ── Button wiring ──
   document.getElementById('logoutBtn')?.addEventListener('click', ()=>openModal('logoutModal'));
   document.getElementById('editRecordsBtn')?.addEventListener('click', ()=>openModal('editSearchModal'));
   // Full View button event removed
-  document.getElementById('downloadBtn')?.addEventListener('click', ()=>openModal('downloadModal'));
+  document.getElementById('downloadBtn')?.addEventListener('click', () => {
+    // Pre-fill download modal from the currently active filter panel values
+    const dlCampus  = document.getElementById('dlCampus');
+    const dlStatus  = document.getElementById('dlStatus');
+    const dlType    = document.getElementById('dlType');
+    const dlCollege = document.getElementById('dlCollege');
+    const dlProgram = document.getElementById('dlProgram');
+    const dlStart   = document.getElementById('downloadStart');
+    const dlEnd     = document.getElementById('downloadEnd');
+    if (dlCampus  && campus)    dlCampus.value  = campus.value    || '';
+    if (dlStatus  && status)    dlStatus.value  = status.value    || '';
+    if (dlType    && type)      dlType.value    = type.value      || '';
+    if (dlCollege && college)   dlCollege.value = college.value   || '';
+    if (dlProgram && program)   dlProgram.value = program.value   || '';
+    if (dlStart   && dateStart) dlStart.value   = dateStart.value || '';
+    if (dlEnd     && dateEnd)   dlEnd.value     = dateEnd.value   || '';
+    openModal('downloadModal');
+    fetchDlCount();
+  });
+
+  // ── Live record count for download modal ──
+  let dlCountDebounce = null;
+  async function fetchDlCount() {
+    const countText    = document.getElementById('dlCountText');
+    const countSpinner = document.getElementById('dlCountSpinner');
+    if (!countText) return;
+    if (countSpinner) countSpinner.style.display = 'inline';
+    const params = new URLSearchParams();
+    const v = {
+      campus:  document.getElementById('dlCampus')?.value,
+      status:  document.getElementById('dlStatus')?.value,
+      type:    document.getElementById('dlType')?.value,
+      college: document.getElementById('dlCollege')?.value,
+      program: document.getElementById('dlProgram')?.value,
+      start:   document.getElementById('downloadStart')?.value,
+      end:     document.getElementById('downloadEnd')?.value,
+    };
+    if (v.campus)  params.set('campus',  v.campus);
+    if (v.status)  params.set('status',  v.status);
+    if (v.type)    params.set('type',    v.type);
+    if (v.college) params.set('college', v.college);
+    if (v.program) params.set('program', v.program);
+    if (v.start)   params.set('start',   v.start);
+    if (v.end)     params.set('end',     v.end);
+    params.set('per_page', '1'); params.set('page', '1');
+    try {
+      const resp = await fetch('/api/records?' + params, { headers: { 'Accept': 'application/json' } });
+      const data = await resp.json();
+      const total = data.total ?? 0;
+      const hasFilter = Object.values(v).some(x => x);
+      countText.innerHTML = hasFilter
+        ? `<strong style="color:var(--maroon)">${total.toLocaleString()}</strong> record${total !== 1 ? 's' : ''} match your filters and will be included in the download.`
+        : `<strong style="color:var(--maroon)">${total.toLocaleString()}</strong> record${total !== 1 ? 's' : ''} total will be included (no filters applied).`;
+    } catch (_) {
+      countText.textContent = 'Could not load record count.';
+    } finally {
+      if (countSpinner) countSpinner.style.display = 'none';
+    }
+  }
+
+  // Wire all download modal filter changes to re-fetch count
+  ['dlCampus','dlStatus','dlType','dlCollege','dlProgram','downloadStart','downloadEnd'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', () => {
+      clearTimeout(dlCountDebounce);
+      dlCountDebounce = setTimeout(fetchDlCount, 300);
+    });
+  });
 
   // ── Logout form ──
   const logoutForm = document.getElementById('logoutForm');
@@ -1705,16 +2008,7 @@
   }
 
   // ── Download modal ──
-  const modeAll=document.getElementById('modeAll'), modeRange=document.getElementById('modeRange');
-  const dlStart=document.getElementById('downloadStart'), dlEnd=document.getElementById('downloadEnd');
-  [modeAll,modeRange].forEach(r=>r?.addEventListener('change',()=>{
-    const range=modeRange.checked;
-    dlStart.disabled=!range; dlEnd.disabled=!range;
-    if(!range){ dlStart.value=''; dlEnd.value=''; }
-    else dlStart.focus();
-  }));
-  document.getElementById('submitDownloadBtn')?.addEventListener('click',()=>{
-    if(modeAll.checked){ dlStart.disabled=true; dlEnd.disabled=true; }
+  document.getElementById('submitDownloadBtn')?.addEventListener('click', () => {
     document.getElementById('downloadForm').submit();
   });
 
@@ -1726,14 +2020,6 @@
   });
 
   // ── Filtering / pagination ──
-  const q      = document.getElementById('viewAllSearch');
-  const campus = document.getElementById('filterCampus');
-  const type   = document.getElementById('filterType');
-  const status = document.getElementById('filterStatus');
-  const hint   = document.getElementById('resultHint');
-    const college = document.getElementById('filterCollege');
-    const program = document.getElementById('filterProgram');
-
   (function(){ const p=new URLSearchParams(window.location.search); const t=p.get('q'); if(t&&q) q.value=t; })();
 
   const allRows = document.querySelectorAll('#mainTableBody tr.record-row');
@@ -1746,41 +2032,76 @@
     if(type?.value) params.set('type',type.value);
     if(status?.value) params.set('status',status.value);
     if(campus?.value) params.set('campus',campus.value);
-    if(college?.value) params.set('college',college.value);
-    if(program?.value) params.set('program',program.value);
+    if(college?.value)      params.set('college', college.value);
+    if(program?.value)      params.set('program', program.value);
+    if(dateStart?.value)    params.set('start',   dateStart.value);
+    if(dateEnd?.value)      params.set('end',     dateEnd.value);
     params.set('page',currentPage); params.set('per_page',100);
     try{
       const resp=await fetch('/api/records?'+params,{headers:{'Accept':'application/json'}});
       if(!resp.ok) throw new Error();
       const data=await resp.json();
       const items=data.data||[]; lastPage=data.last_page||1;
+      const total=data.total||0;
       const tbody=document.getElementById('mainTableBody');
-      if(tbody) tbody.innerHTML = items.length ? items.map(r=>buildRow(r)).join('') : '<tr><td colspan="16" style="text-align:center;padding:40px;color:var(--muted);">No records found.</td></tr>';
+      if(tbody) tbody.innerHTML = items.length ? items.map((r,i)=>buildRow(r, i===0)).join('') : '<tr><td colspan="16" style="text-align:center;padding:40px;color:var(--muted);">No records found.</td></tr>';
       document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${lastPage}`;
       document.getElementById('prevPageBtn').disabled = currentPage<=1;
       document.getElementById('nextPageBtn').disabled = currentPage>=lastPage;
       if(hint) hint.textContent = items.length ? `Showing ${items.length} record(s).` : 'No results.';
+      // Update live count display
+      const isFiltered = (q?.value.trim()||type?.value||status?.value||campus?.value||college?.value||program?.value||dateStart?.value||dateEnd?.value);
+      const countDisplay  = document.getElementById('recordCountDisplay');
+      const countFiltered = document.getElementById('recordCountFiltered');
+      const countNum      = document.getElementById('recordCountNum');
+      if (isFiltered) {
+        if(countDisplay)  countDisplay.textContent  = `${total} record(s) total`;
+        if(countNum)      countNum.textContent      = total;
+        if(countFiltered) countFiltered.style.display = '';
+      } else {
+        if(countDisplay)  countDisplay.textContent  = `${total} record(s)`;
+        if(countFiltered) countFiltered.style.display = 'none';
+      }
     }catch(e){ console.error(e); }
   }
 
-  function buildRow(r){
-    const rawReg = r.date_registered_deposited||r.registered||null;
+  function buildRow(r, isFirst){
+    const rawReg     = r.date_registered_deposited || r.registered || null;
+    const rawFiling  = r.date_of_filing  || null;
+    const rawCreated = r.date_creation   || null;
     const reg = rawReg ? new Date(rawReg).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'2-digit'}) : '—';
-    const typeLow=(r.category||r.type||'').toLowerCase();
-    let due='—',validity='—';
-    try{ if(rawReg){ const d=new Date(rawReg);
-      if(typeLow==='patent'){d.setFullYear(d.getFullYear()+20);due=d.toLocaleDateString();validity='20 yrs';}
-      else if(typeLow==='copyright'){d.setFullYear(d.getFullYear()+70);due=d.toLocaleDateString();validity='70 yrs';}
-      else if(typeLow==='utility model'){d.setFullYear(d.getFullYear()+10);due=d.toLocaleDateString();validity='10 yrs';}
-      else if(typeLow==='industrial design'){d.setFullYear(d.getFullYear()+15);due=d.toLocaleDateString();validity='15 yrs';}
-      else if(typeLow==='trademark'){d.setFullYear(d.getFullYear()+10);due=d.toLocaleDateString();validity='10 yrs';}
-    }}catch(e){}
+    const typeLow = (r.category || r.type || '').toLowerCase().trim();
+    let due = '—', validity = '—';
+    // Patent/UM/Design use date_creation (= Date Patented/Submitted/Filed)
+    // Trademark uses date_registered, Copyright has no computable expiry
+    const baseForFiling = rawCreated || rawReg;
+    try {
+      if (typeLow === 'patent') {
+        if (baseForFiling) { const d=new Date(baseForFiling); d.setFullYear(d.getFullYear()+20); due=d.toLocaleDateString(); }
+        validity = '20 yrs';
+      } else if (typeLow === 'utility model') {
+        if (baseForFiling) { const d=new Date(baseForFiling); d.setFullYear(d.getFullYear()+7); due=d.toLocaleDateString(); }
+        validity = '7 yrs';
+      } else if (typeLow === 'industrial design') {
+        if (baseForFiling) { const d=new Date(baseForFiling); d.setFullYear(d.getFullYear()+5); due=d.toLocaleDateString(); }
+        validity = '5 yrs (max 15)';
+      } else if (typeLow === 'trademark') {
+        if (rawReg) { const d=new Date(rawReg); d.setFullYear(d.getFullYear()+10); due=d.toLocaleDateString(); }
+        validity = '10 yrs';
+      } else if (typeLow === 'copyright') {
+        validity = 'Life+50 yrs'; due = '—';
+      }
+    } catch(e) {}
+    const displayStatus = r.status === 'Recently Filed' ? 'Filed' : (r.status || '');
     const badgeMap={'Registered':'status-registered','Under Review':'status-review','Filed':'status-filed','Needs Attention':'status-attention','Returned':'status-returned'};
-    const bc=badgeMap[r.status]||'status-default';
+    const bc=badgeMap[displayStatus]||'status-default';
     const id=esc(r.record_id||r.id||''); const title=esc(r.ip_title||r.title||''); const ownerText=esc(r.owner_inventor||r.owner||'');
-    const rawCreated=r.date_creation||null;
     const created=rawCreated?new Date(rawCreated).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'2-digit'}):'—';
-    return `<tr class="record-row" style="border-bottom:1px solid var(--line);">
+    const filed=rawFiling?new Date(rawFiling).toLocaleDateString('en-US',{year:'numeric',month:'short',day:'2-digit'}):'—';
+    const trId   = isFirst ? 'id="tutorialFirstRow"' : '';
+    const viewId = isFirst ? 'id="tutorialViewBtn"'  : '';
+    const editId = isFirst ? 'id="tutorialEditBtn"'  : '';
+    return `<tr class="record-row" ${trId} style="border-bottom:1px solid var(--line);">
       <td class="record-id-cell record-id">${id}</td>
       <td data-col="title" class="record-title-cell record-title"><div class="title-text" title="${title}">${title}</div></td>
       <td data-col="category" class="record-type" style="white-space:nowrap;font-size:.78rem;">${esc(r.category||r.type||'—')}</td>
@@ -1789,32 +2110,90 @@
       <td data-col="college" style="white-space:nowrap;font-size:.75rem;color:var(--muted);">${esc(r.college||'—')}</td>
       <td data-col="program" style="white-space:nowrap;font-size:.75rem;color:var(--muted);">${esc(r.program||'—')}</td>
       <td data-col="classofwork" style="white-space:nowrap;font-size:.75rem;color:var(--muted);">${esc(r.class_of_work||'—')}</td>
-      <td data-col="status" class="record-status" style="white-space:nowrap;"><span class="status-badge ${bc}">${esc(r.status||'')}</span></td>
+      <td data-col="status" class="record-status" style="white-space:nowrap;"><span class="status-badge ${bc}">${esc(displayStatus)}</span></td>
+      <td data-col="dateoffiling" style="white-space:nowrap;color:var(--muted);font-size:.75rem;">${esc(filed)}</td>
       <td data-col="datecreated" style="white-space:nowrap;color:var(--muted);font-size:.75rem;">${esc(created)}</td>
       <td data-col="registered" class="record-registered" style="white-space:nowrap;color:var(--muted);font-size:.75rem;">${esc(reg)}</td>
       <td data-col="nextdue" class="record-due" style="white-space:nowrap;color:var(--muted);font-size:.75rem;">${esc(due)}</td>
       <td data-col="validity" class="record-validity" style="white-space:nowrap;color:var(--muted);font-size:.75rem;">${esc(validity)}</td>
       <td data-col="regnumber" class="record-ipophl" style="white-space:nowrap;font-size:.75rem;">${esc(r.registration_number||'')}</td>
       <td data-col="gdrive" class="record-link">${r.gdrive_link?`<a href="${esc(r.gdrive_link)}" target="_blank" style="color:var(--maroon);font-weight:700;font-size:.75rem;text-decoration:underline;">Open file</a>`:'<span style="color:var(--muted);">—</span>'}</td>
+      <td data-col="remarks" style="font-size:.75rem;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(r.remarks)}">${esc(r.remarks)||'<span style="color:var(--muted);">—</span>'}</td>
       <td data-col="actions" style="white-space:nowrap;"><div style="display:flex;gap:5px;">
         <button type="button" class="action-btn printBtn" data-record-id="${id}">Print</button>
-        <button type="button" class="action-btn viewBtn" data-record-id="${id}">View</button>
-        <button type="button" class="action-btn edit editBtn" data-record-id="${id}">Edit</button>
-        <button type="button" class="action-btn printBtn" data-record-id="${id}">Archive</button>
+        <button type="button" class="action-btn viewBtn" ${viewId} data-record-id="${id}">View</button>
+        <button type="button" class="action-btn edit editBtn" ${editId} data-record-id="${id}">Edit</button>
+        <button type="button" class="action-btn deleteBtn" data-record-id="${id}">Delete</button>
       </div></td>
     </tr>`;
   }
 
   function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
 
+  let pendingDelete = null;
+
+  function promptDeleteRecord(record){
+    const cleanId = String(record?.id || '').trim();
+    if(!cleanId) return;
+    pendingDelete = record;
+    document.getElementById('deleteConfirmRecordId').textContent = `Record #${cleanId}`;
+    document.getElementById('deleteConfirmRecordTitle').textContent = record.title || 'Untitled record';
+    document.getElementById('deleteConfirmRecordMeta').textContent = `${record.category || 'Category —'} • ${record.status || 'Status —'}`;
+    const btn = document.getElementById('confirmDeleteBtn');
+    if(btn){
+      btn.disabled = false;
+      btn.textContent = 'Delete Record';
+    }
+    openModal('deleteConfirmModal');
+  }
+
+  async function deleteRecord(record){
+    const cleanId = String(record?.id || '').trim();
+    if(!cleanId) return;
+
+    const btn = document.getElementById('confirmDeleteBtn');
+    const originalText = btn?.textContent || 'Delete Record';
+    if(btn){
+      btn.disabled = true;
+      btn.textContent = 'Deleting...';
+    }
+
+    try{
+      const resp = await fetch(`/records/${encodeURIComponent(cleanId)}`, {
+        method: 'DELETE',
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+          'Accept': 'application/json',
+        },
+      });
+
+      const data = await resp.json().catch(() => ({}));
+      if(!resp.ok || data.success === false){
+        throw new Error(data.message || 'Delete failed.');
+      }
+
+      closeModal('deleteConfirmModal');
+      pendingDelete = null;
+      await fetchRecords(currentPage);
+    }catch(err){
+      alert(err.message || 'Delete failed.');
+      if(btn){
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    }
+  }
+
   document.getElementById('applySearchBtn')?.addEventListener('click',()=>fetchRecords(1));
   document.getElementById('prevPageBtn')?.addEventListener('click',()=>{ if(currentPage>1) fetchRecords(currentPage-1); });
   document.getElementById('nextPageBtn')?.addEventListener('click',()=>fetchRecords(currentPage+1));
   q?.addEventListener('keypress',e=>{ if(e.key==='Enter') fetchRecords(1); });
   [campus,type,status,college,program].forEach(el=>el?.addEventListener('change',()=>fetchRecords(1)));
+  [dateStart,dateEnd].forEach(el=>el?.addEventListener('change',()=>fetchRecords(1)));
   type?.addEventListener('change', () => applyColumnLayout(type.value));
   document.getElementById('resetFiltersBtn')?.addEventListener('click',()=>{
     if(q) q.value=''; if(campus) campus.value=''; if(type) type.value=''; if(status) status.value=''; if(college) college.value=''; if(program) program.value='';
+    if(dateStart) dateStart.value=''; if(dateEnd) dateEnd.value='';
     applyColumnLayout('');
     fetchRecords(1);
   });
@@ -1828,7 +2207,7 @@
     // columns to SHOW and their display labels
     // all other columns are hidden
     // Column order MUST follow the HTML <td> order:
-    // title → category → owner → campus → college → program → classofwork → status → datecreated → registered → nextdue → validity → regnumber → gdrive → actions
+    // title → category → owner → campus → college → program → classofwork → status → dateoffiling → datecreated → registered → nextdue → validity → regnumber → gdrive → remarks → actions
     copyright: {
       regnumber:   'Reg. Number',
       title:       'Title of Work',
@@ -1839,11 +2218,13 @@
       program:     'Program',
       classofwork: 'Class of Work',
       status:      'Status',
+      dateoffiling:'Date of Filing',
       datecreated: 'Date Created',
       registered:  'Date Registered/Deposited',
       nextdue:     'Next Due',
       validity:    'Validity',
       gdrive:      'GDrive',
+      remarks:     'Remarks',
       actions:     'Actions',
     },
     patent: {
@@ -1857,6 +2238,7 @@
       nextdue:     'Next Due',
       validity:    'Validity',
       gdrive:      'GDrive',
+      remarks:     'Remarks',
       actions:     'Actions',
     },
     trademark: {
@@ -1869,6 +2251,7 @@
       nextdue:     'Next Due',
       validity:    'Validity',
       gdrive:      'GDrive',
+      remarks:     'Remarks',
       actions:     'Actions',
     },
   };
@@ -1892,6 +2275,7 @@
     validity:    'Validity',
     regnumber:   'Reg. Number',
     gdrive:      'GDrive',
+    remarks:     'Remarks',
     actions:     'Actions',
   };
 
@@ -1987,6 +2371,8 @@
       ipophl=(row.querySelector('.record-ipophl')?.textContent||'').trim();
       gdrive=(row.querySelector('.record-link a')?.href||'').trim();
     }
+    remarks=(row.querySelector('[data-col="remarks"]')?.textContent||remarks||'').trim();
+    if (/^[-\u2014]+$/.test(remarks)) remarks = '';
     document.getElementById('editField_id').value=id;
     document.getElementById('editField_title').value=title;
     document.getElementById('editField_type').value=type;
@@ -1996,6 +2382,20 @@
     document.getElementById('editField_remarks').value=remarks;
     document.getElementById('editField_ipophl_id').value=ipophl;
     document.getElementById('editField_gdrive_link').value=gdrive;
+    // Date Created — read from the datecreated cell in the row
+    const createdCell = row.querySelector('[data-col="datecreated"]');
+    const createdRaw  = (createdCell?.textContent||'').trim();
+    if(createdRaw && createdRaw!=='—'){ const dc=new Date(createdRaw); if(!isNaN(dc)){
+      document.getElementById('editField_date_creation').value=`${dc.getFullYear()}-${String(dc.getMonth()+1).padStart(2,'0')}-${String(dc.getDate()).padStart(2,'0')}`;
+    } else document.getElementById('editField_date_creation').value='';
+    } else document.getElementById('editField_date_creation').value='';
+    // Date of Filing — read from the dateoffiling cell in the row
+    const filingCell = row.querySelector('[data-col="dateoffiling"]');
+    const filingRaw  = (filingCell?.textContent||'').trim();
+    if(filingRaw && filingRaw!=='—'){ const df=new Date(filingRaw); if(!isNaN(df)){
+      document.getElementById('editField_date_of_filing').value=`${df.getFullYear()}-${String(df.getMonth()+1).padStart(2,'0')}-${String(df.getDate()).padStart(2,'0')}`;
+    } else document.getElementById('editField_date_of_filing').value='';
+    } else document.getElementById('editField_date_of_filing').value='';
     if(reg && reg!=='—'){ const d=new Date(reg); if(!isNaN(d)){
       document.getElementById('editField_registered').value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     }} else document.getElementById('editField_registered').value='';
@@ -2008,6 +2408,15 @@
     const btn=e.target.closest('button'); if(!btn) return;
     const row=btn.closest('tr.record-row'); if(!row) return;
     if(btn.classList.contains('editBtn')){ loadRowIntoEdit(row); return; }
+    if(btn.classList.contains('deleteBtn')){
+      promptDeleteRecord({
+        id: (row.querySelector('.record-id')?.textContent||btn.dataset.recordId||'').trim(),
+        title: (row.querySelector('.record-title .title-text')?.textContent||'').trim(),
+        category: (row.querySelector('.record-type')?.textContent||'').trim(),
+        status: ((row.querySelector('.record-status .status-badge')?.textContent||'').trim() === 'Recently Filed' ? 'Filed' : (row.querySelector('.record-status .status-badge')?.textContent||'').trim()),
+      });
+      return;
+    }
     if(btn.classList.contains('printBtn')){
       const id=(row.querySelector('.record-id')?.textContent||'').trim();
       printRecord(id);
@@ -2018,6 +2427,11 @@
       window.location.href = `/record-changes/${encodeURIComponent(id)}`;
       return;
     }
+  });
+
+  document.getElementById('confirmDeleteBtn')?.addEventListener('click', ()=>{
+    if(!pendingDelete) return;
+    deleteRecord(pendingDelete);
   });
 
   // ── Edit Search (API-powered — searches all records, not just visible rows) ──
@@ -2031,10 +2445,38 @@
     document.getElementById('editField_type').value        = (r.category  || r.type  || '').trim();
     document.getElementById('editField_owner').value       = (r.owner_inventor || r.owner || '').trim();
     document.getElementById('editField_campus').value      = (r.campus    || '').trim();
-    document.getElementById('editField_status').value      = (r.status    || '').trim();
+    document.getElementById('editField_status').value      = ((r.status || '').trim() === 'Recently Filed' ? 'Filed' : (r.status || '').trim());
     document.getElementById('editField_ipophl_id').value   = (r.registration_number || r.ipophl_id || '').trim();
     document.getElementById('editField_gdrive_link').value = (r.gdrive_link || '').trim();
     document.getElementById('editField_remarks').value     = (r.remarks   || '').trim();
+    // Date Created
+    const dc = r.date_creation || '';
+    if (dc && dc !== '—') {
+      const dcd = new Date(dc);
+      if (!isNaN(dcd)) {
+        document.getElementById('editField_date_creation').value =
+          `${dcd.getFullYear()}-${String(dcd.getMonth()+1).padStart(2,'0')}-${String(dcd.getDate()).padStart(2,'0')}`;
+      } else {
+        document.getElementById('editField_date_creation').value = '';
+      }
+    } else {
+      document.getElementById('editField_date_creation').value = '';
+    }
+
+    // Date of Filing
+    const df = r.date_of_filing || '';
+    if (df && df !== '—') {
+      const dfd = new Date(df);
+      if (!isNaN(dfd)) {
+        document.getElementById('editField_date_of_filing').value =
+          `${dfd.getFullYear()}-${String(dfd.getMonth()+1).padStart(2,'0')}-${String(dfd.getDate()).padStart(2,'0')}`;
+      } else {
+        document.getElementById('editField_date_of_filing').value = '';
+      }
+    } else {
+      document.getElementById('editField_date_of_filing').value = '';
+    }
+
     const reg = r.date_registered_deposited || r.registered || '';
     if (reg && reg !== '—') {
       const d = new Date(reg);
@@ -2099,14 +2541,29 @@
   // ── Save edit ──
   document.getElementById('saveEditBtn')?.addEventListener('click', async ()=>{
     const id=encodeURIComponent((document.getElementById('editField_id').value||'').trim());
+    const editDateCreated = (document.getElementById('editField_date_creation').value||'').trim();
+    const editDateFiled = (document.getElementById('editField_date_of_filing').value||'').trim();
+    const editDateRegistered = (document.getElementById('editField_registered').value||'').trim();
+    if (editDateRegistered && editDateCreated && editDateCreated > editDateRegistered) {
+      showToast('Date created cannot be after the registration date.', 'error');
+      document.getElementById('editField_date_creation')?.focus();
+      return;
+    }
+    if (editDateRegistered && editDateFiled && editDateFiled > editDateRegistered) {
+      showToast('Date of filing cannot be after the registration date.', 'error');
+      document.getElementById('editField_date_of_filing')?.focus();
+      return;
+    }
     const payload={
       title:(document.getElementById('editField_title').value||'').trim(),
       type:(document.getElementById('editField_type').value||'').trim(),
       owner:(document.getElementById('editField_owner').value||'').trim(),
       campus:(document.getElementById('editField_campus').value||'').trim(),
       status:(document.getElementById('editField_status').value||'').trim(),
-      registered:(document.getElementById('editField_registered').value||'').trim(),
-      ipophl_id:(document.getElementById('editField_ipophl_id').value||'').trim(),
+      date_creation:editDateCreated,
+      date_of_filing:editDateFiled,
+      registered:editDateRegistered,
+      registration_number:(document.getElementById('editField_ipophl_id').value||'').trim(),
       gdrive_link:(document.getElementById('editField_gdrive_link').value||'').trim(),
       remarks:(document.getElementById('editField_remarks').value||'').trim(),
     };
@@ -2214,7 +2671,52 @@
     // Clean URL so refresh does not re-trigger the modal
     window.history.replaceState({}, '', window.location.pathname);
 
-    function tryFind(attempts) {
+    function tryFindFullRecord(attempts) {
+      const openSearchFallback = () => {
+        const searchInput = document.getElementById('editSearchInput');
+        if (searchInput) searchInput.value = editId;
+        openModal('editSearchModal');
+      };
+
+      const openFromApi = (url, pickRecord, onEmpty = openSearchFallback) => {
+        fetch(url, {
+          headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '' },
+          credentials: 'same-origin'
+        })
+        .then(r => r.json())
+        .then(data => {
+          const records = data.data || data.records || [];
+          const exact = pickRecord(records);
+          if (exact) fillEditFields(exact);
+          else onEmpty();
+        })
+        .catch(openSearchFallback);
+      };
+
+      openFromApi(
+        `/api/records?record_id=${encodeURIComponent(editId)}&per_page=1`,
+        records => records[0] || null,
+        () => {}
+      );
+
+      setTimeout(() => {
+        const editModalOpen = document.getElementById('editRecordModal')?.classList.contains('open');
+        const searchModalOpen = document.getElementById('editSearchModal')?.classList.contains('open');
+        if (editModalOpen || searchModalOpen) return;
+
+        openFromApi(
+          `/api/records?q=${encodeURIComponent(editId)}&per_page=20`,
+          records => {
+            const key = editId.toLowerCase();
+            return records.find(r =>
+              (r.record_id || r.id || '').trim().toLowerCase() === key ||
+              (r.ip_title || r.title || '').trim().toLowerCase() === key
+            ) || records[0] || null;
+          }
+        );
+      }, 450);
+      return;
+
       const rows  = Array.from(document.querySelectorAll('#mainTableBody tr.record-row'));
       const match = rows.find(r =>
         (r.querySelector('.record-title .title-text')?.textContent || r.querySelector('.record-title')?.textContent || '').trim().toLowerCase() === editId.trim().toLowerCase()
@@ -2226,7 +2728,7 @@
       }
 
       if (attempts > 0) {
-        setTimeout(() => tryFind(attempts - 1), 200);
+        setTimeout(() => tryFindFullRecord(attempts - 1), 200);
       } else {
         // Row not in visible DOM — fetch directly from API and fill edit fields
         fetch(`/api/records?q=${encodeURIComponent(editId)}&per_page=20`, {
@@ -2256,7 +2758,7 @@
       }
     }
 
-    setTimeout(() => tryFind(10), 300);
+    setTimeout(() => tryFindFullRecord(10), 300);
   })();
 
   /* Mobile sidebar toggle (same pattern as home.blade.php) */
@@ -2302,6 +2804,852 @@
     if (window.innerWidth > 768) closeMobileSidebar();
   });
 
+})();
+</script>
+
+@if(isset($showTutorial) && $showTutorial)
+<style>
+  #kttmTutOverlay {
+    position: fixed; inset: 0; z-index: 9000; pointer-events: all;
+  }
+  #kttmTutSvg {
+    position: fixed; inset: 0; width: 100%; height: 100%;
+    z-index: 9001; pointer-events: none;
+  }
+  #kttmTutCard {
+    position: fixed; z-index: 9002;
+    background: #fff; border-radius: 18px;
+    padding: 22px 24px 18px;
+    width: min(340px, calc(100vw - 32px));
+    box-shadow: 0 24px 64px rgba(0,0,0,.22), 0 0 0 1px rgba(0,0,0,.06);
+    transition: top .32s cubic-bezier(.4,0,.2,1),
+                left .32s cubic-bezier(.4,0,.2,1),
+                opacity .22s ease;
+  }
+  #kttmTutCard.tut-hidden { opacity: 0; pointer-events: none; }
+  .tut-step-label {
+    font-size: 0.62rem; font-weight: 800; letter-spacing: .1em;
+    text-transform: uppercase; color: #A52C30; margin-bottom: 6px;
+    font-family: 'DM Mono', monospace;
+  }
+  .tut-title { font-size: 1rem; font-weight: 800; color: #0F172A; margin-bottom: 6px; line-height: 1.3; }
+  .tut-desc  { font-size: 0.82rem; color: #64748B; line-height: 1.6; margin-bottom: 16px; }
+  .tut-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .tut-dots   { display: flex; gap: 5px; align-items: center; }
+  .tut-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #e2e8f0; transition: background .2s, width .2s;
+  }
+  .tut-dot.active { background: #A52C30; width: 18px; border-radius: 3px; }
+  .tut-actions { display: flex; gap: 8px; }
+  .tut-btn-skip {
+    padding: 8px 14px; border-radius: 10px;
+    border: 1.5px solid #e2e8f0; background: none;
+    font-family: inherit; font-size: 0.75rem; font-weight: 700;
+    color: #94a3b8; cursor: pointer; transition: all .15s;
+  }
+  .tut-btn-skip:hover { border-color: #A52C30; color: #A52C30; }
+  .tut-btn-back {
+    padding: 8px 14px; border-radius: 10px;
+    border: 1.5px solid #e2e8f0; background: #fff;
+    font-family: inherit; font-size: 0.75rem; font-weight: 700;
+    color: #64748B; cursor: pointer; transition: all .15s;
+  }
+  .tut-btn-back:hover:not(:disabled) { border-color: #A52C30; color: #A52C30; }
+  .tut-btn-back:disabled { opacity: .45; cursor: not-allowed; }
+  .tut-btn-next {
+    padding: 8px 20px; border-radius: 10px; border: none;
+    background: linear-gradient(135deg, #A52C30, #7E1F23);
+    font-family: inherit; font-size: 0.75rem; font-weight: 800;
+    color: #fff; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(165,44,48,.3);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .tut-btn-next:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(165,44,48,.4); }
+  #kttmTutPulse {
+    position: fixed; z-index: 9003; border-radius: 14px;
+    border: 2.5px solid #F0C860; pointer-events: none;
+    animation: tutPulse 1.8s ease-out infinite;
+    transition: all .32s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes tutPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(240,200,96,.55); }
+    70%  { box-shadow: 0 0 0 10px rgba(240,200,96,0); }
+    100% { box-shadow: 0 0 0 0 rgba(240,200,96,0); }
+  }
+</style>
+
+<div id="kttmTutOverlay" style="display:none"></div>
+<svg id="kttmTutSvg" xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <defs>
+    <mask id="kttmTutMask">
+      <rect width="100%" height="100%" fill="white"/>
+      <rect id="kttmTutHole" x="0" y="0" width="0" height="0" rx="14" fill="black"/>
+    </mask>
+  </defs>
+  <rect width="100%" height="100%" fill="rgba(10,14,26,0.72)" mask="url(#kttmTutMask)"/>
+</svg>
+<div id="kttmTutPulse" style="display:none"></div>
+<div id="kttmTutCard" class="tut-hidden">
+  <div class="tut-step-label" id="kttmTutLabel">Step 1 of 5</div>
+  <div class="tut-title"      id="kttmTutTitle"></div>
+  <div class="tut-desc"       id="kttmTutDesc"></div>
+  <div class="tut-footer">
+    <div class="tut-dots"     id="kttmTutDots"></div>
+    <div class="tut-actions">
+      <button class="tut-btn-skip" id="kttmTutSkip">Skip tutorial</button>
+      <button class="tut-btn-back" id="kttmTutBack" disabled>Back</button>
+      <button class="tut-btn-next" id="kttmTutNext">Next</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const STEPS = [
+    {
+      target: 'tutorialSidebar',
+      title:  'Navigation Sidebar',
+      desc:   'The sidebar lets you move between Dashboard, Records, Insights, Calendar, and your Profile from any page.',
+    },
+    {
+      target: 'tutorialFilterPanel',
+      title:  'Search & Filter Records',
+      desc:   'Use this panel to search records by keyword, and filter by status, campus, type, college, or program. Click Search to apply your filters.',
+    },
+    {
+      target: 'editRecordsBtn',
+      title:  'Edit a Record',
+      desc:   'Click Edit Records to search for an existing IP record and modify its details, such as status, registration number, GDrive link, or remarks.',
+    },
+    {
+      target: 'tutorialRecordsTable',
+      title:  'IP Records Table',
+      desc:   'All your IP records are listed here. Click on any row to view its full details and audit trail. You can sort columns by clicking the headers.',
+    },
+    {
+      target: 'downloadBtn',
+      title:  'Download Records',
+      desc:   'Click the download icon to export your IP records as a CSV file. You can download all records or filter by a custom date range.',
+      action: 'openDownloadModal',
+    },
+    {
+      target: 'tutorialDownloadBox',
+      title:  'Export Options',
+      desc:   'Choose to download all records at once, or set a date range to export only records registered within a specific period. Then hit Download.',
+      action: 'closeDownloadModal',
+    },
+    {
+      target: 'tutorialNewRecord',
+      title:  'Add a New IP Record',
+      desc:   'Use this button to register a brand new intellectual property record. It opens a form where you enter all the required details.',
+    },
+  ];
+
+  let current = 0;
+  const TOTAL = STEPS.length;
+  const PAD   = 12;
+
+  const overlay = document.getElementById('kttmTutOverlay');
+  const hole    = document.getElementById('kttmTutHole');
+  const pulse   = document.getElementById('kttmTutPulse');
+  const card    = document.getElementById('kttmTutCard');
+  const labelEl = document.getElementById('kttmTutLabel');
+  const titleEl = document.getElementById('kttmTutTitle');
+  const descEl  = document.getElementById('kttmTutDesc');
+  const dotsEl  = document.getElementById('kttmTutDots');
+  const skipBtn = document.getElementById('kttmTutSkip');
+  const backBtn = document.getElementById('kttmTutBack');
+  const nextBtn = document.getElementById('kttmTutNext');
+
+  function syncNavButtons() {
+    backBtn.disabled = current === 0;
+  }
+
+  function buildDots() {
+    dotsEl.innerHTML = STEPS.map((_, i) =>
+      `<div class="tut-dot${i === current ? ' active' : ''}" id="tut-dot-${i}"></div>`
+    ).join('');
+  }
+
+  function positionOnEl(el, idx) {
+    const r = el.getBoundingClientRect();
+    const x = Math.floor(r.left  - PAD);
+    const y = Math.floor(r.top   - PAD);
+    const w = Math.ceil(r.width  + PAD * 2);
+    const h = Math.ceil(r.height + PAD * 2);
+
+    hole.setAttribute('x', x); hole.setAttribute('y', y);
+    hole.setAttribute('width', w); hole.setAttribute('height', h);
+    pulse.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px;`;
+
+    labelEl.textContent = `Step ${idx + 1} of ${TOTAL}`;
+    titleEl.textContent = STEPS[idx].title;
+    descEl.textContent  = STEPS[idx].desc;
+    nextBtn.textContent = (idx === TOTAL - 1) ? 'Finish' : 'Next';
+    syncNavButtons();
+    document.querySelectorAll('.tut-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
+
+    // Force reflow so card height is accurate before positioning
+    card.classList.remove('tut-hidden');
+    void card.offsetHeight;
+
+    const cardW = Math.min(340, window.innerWidth - 32);
+    const cardH = card.offsetHeight || 210;
+    const gap   = 16;
+    let left = x, top = y + h + gap;
+    if (left + cardW > window.innerWidth  - gap) left = window.innerWidth  - cardW - gap;
+    if (left < gap)                              left = gap;
+    if (top  + cardH > window.innerHeight - gap) top  = y - cardH - gap;
+    if (top  < gap)                              top  = gap;
+    card.style.cssText += `left:${left}px;top:${top}px;width:${cardW}px;`;
+  }
+
+  function showStep(idx) {
+    const step = STEPS[idx];
+    const modal = document.getElementById('downloadModal');
+
+    const el = document.getElementById(step.target);
+    if (!el) { goNext(); return; }
+
+    // If the step targets something inside the download modal, wait for it to be visible
+    if (step.target === 'tutorialDownloadBox') {
+      if (modal && !modal.classList.contains('open')) {
+        modal.classList.add('open');
+      }
+      setTimeout(() => positionOnEl(el, idx), 320);
+      return;
+    }
+
+    if (modal?.classList.contains('open')) {
+      modal.classList.remove('open');
+    }
+
+    positionOnEl(el, idx);
+  }
+
+  function goNext() {
+    current++;
+    if (current >= TOTAL) {
+      hideOverlay();
+      sessionStorage.setItem('kttm_tut_page', 'newrecord');
+      window.location.href = '{{ url('/ipassets/create') }}';
+    } else {
+      showStep(current);
+    }
+  }
+
+  function goBack() {
+    if (current === 0) return;
+    current--;
+    showStep(current);
+  }
+
+  function hideOverlay() {
+    card.classList.add('tut-hidden');
+    overlay.style.display = 'none';
+    document.getElementById('kttmTutSvg').style.display = 'none';
+    pulse.style.display = 'none';
+  }
+
+  async function dismiss() {
+    hideOverlay();
+    try {
+      await fetch('/tutorial/dismiss', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json',
+                   'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+      });
+    } catch(e) {}
+  }
+
+  skipBtn.addEventListener('click', dismiss);
+  backBtn.addEventListener('click', goBack);
+  nextBtn.addEventListener('click', goNext);
+  let rt;
+  window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => showStep(current), 120); });
+
+  function boot() {
+    // Only run if we arrived here from the home tutorial
+    if (sessionStorage.getItem('kttm_tut_page') !== 'records') return;
+    overlay.style.display = '';
+    document.getElementById('kttmTutSvg').style.display = '';
+    pulse.style.display = '';
+    buildDots(); showStep(0);
+  }
+  if (document.readyState === 'complete') setTimeout(boot, 600);
+  else window.addEventListener('load', () => setTimeout(boot, 600));
+})();
+</script>
+@endif
+
+{{-- ============================================================
+     RECORDS TABLE TUTORIAL (Phase 2)
+     Only rendered when $showTutorial === true.
+     Triggered via sessionStorage kttm_tut_page === 'done_newrecord'.
+     Teaches: Filter Panel, Table Row, View Button, Edit Button.
+     Dismissed via POST /tutorial/dismiss on finish or skip.
+============================================================ --}}
+@if(isset($showTutorial) && $showTutorial)
+<style>
+  #kttmTut2Overlay {
+    position: fixed; inset: 0; z-index: 9000; pointer-events: all;
+  }
+  #kttmTut2Svg {
+    position: fixed; inset: 0; width: 100%; height: 100%;
+    z-index: 9001; pointer-events: none;
+  }
+  #kttmTut2Card {
+    position: fixed; z-index: 9002;
+    background: #fff; border-radius: 18px;
+    padding: 22px 24px 18px;
+    width: min(340px, calc(100vw - 32px));
+    box-shadow: 0 24px 64px rgba(0,0,0,.22), 0 0 0 1px rgba(0,0,0,.06);
+    transition: top .32s cubic-bezier(.4,0,.2,1),
+                left .32s cubic-bezier(.4,0,.2,1),
+                opacity .22s ease;
+  }
+  #kttmTut2Card.tut-hidden { opacity: 0; pointer-events: none; }
+  .tut2-step-label {
+    font-size: 0.62rem; font-weight: 800; letter-spacing: .1em;
+    text-transform: uppercase; color: #A52C30; margin-bottom: 6px;
+    font-family: 'DM Mono', monospace;
+  }
+  .tut2-title { font-size: 1rem; font-weight: 800; color: #0F172A; margin-bottom: 6px; line-height: 1.3; }
+  .tut2-desc  { font-size: 0.82rem; color: #64748B; line-height: 1.6; margin-bottom: 16px; }
+  .tut2-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .tut2-dots   { display: flex; gap: 5px; align-items: center; }
+  .tut2-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #e2e8f0; transition: background .2s, width .2s;
+  }
+  .tut2-dot.active { background: #A52C30; width: 18px; border-radius: 3px; }
+  .tut2-actions { display: flex; gap: 8px; }
+  .tut2-btn-skip {
+    padding: 8px 14px; border-radius: 10px;
+    border: 1.5px solid #e2e8f0; background: none;
+    font-family: inherit; font-size: 0.75rem; font-weight: 700;
+    color: #94a3b8; cursor: pointer; transition: all .15s;
+  }
+  .tut2-btn-skip:hover { border-color: #A52C30; color: #A52C30; }
+  .tut2-btn-back {
+    padding: 8px 14px; border-radius: 10px;
+    border: 1.5px solid #e2e8f0; background: #fff;
+    font-family: inherit; font-size: 0.75rem; font-weight: 700;
+    color: #64748B; cursor: pointer; transition: all .15s;
+  }
+  .tut2-btn-back:hover:not(:disabled) { border-color: #A52C30; color: #A52C30; }
+  .tut2-btn-back:disabled { opacity: .45; cursor: not-allowed; }
+  .tut2-btn-next {
+    padding: 8px 20px; border-radius: 10px; border: none;
+    background: linear-gradient(135deg, #A52C30, #7E1F23);
+    font-family: inherit; font-size: 0.75rem; font-weight: 800;
+    color: #fff; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(165,44,48,.3);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .tut2-btn-next:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(165,44,48,.4); }
+  #kttmTut2Pulse {
+    position: fixed; z-index: 9003; border-radius: 14px;
+    border: 2.5px solid #F0C860; pointer-events: none;
+    animation: tut2Pulse 1.8s ease-out infinite;
+    transition: all .32s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes tut2Pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(240,200,96,.55); }
+    70%  { box-shadow: 0 0 0 10px rgba(240,200,96,0); }
+    100% { box-shadow: 0 0 0 0 rgba(240,200,96,0); }
+  }
+</style>
+
+<div id="kttmTut2Overlay" style="display:none"></div>
+
+<svg id="kttmTut2Svg" xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <defs>
+    <mask id="kttmTut2Mask">
+      <rect width="100%" height="100%" fill="white"/>
+      <rect id="kttmTut2Hole" x="0" y="0" width="0" height="0" rx="14" fill="black"/>
+    </mask>
+  </defs>
+  <rect width="100%" height="100%" fill="rgba(10,14,26,0.72)" mask="url(#kttmTut2Mask)"/>
+</svg>
+
+<div id="kttmTut2Pulse" style="display:none"></div>
+
+<div id="kttmTut2Card" class="tut-hidden">
+  <div class="tut2-step-label" id="kttmTut2Label">Step 1 of 3</div>
+  <div class="tut2-title"      id="kttmTut2Title"></div>
+  <div class="tut2-desc"       id="kttmTut2Desc"></div>
+  <div class="tut2-footer">
+    <div class="tut2-dots"     id="kttmTut2Dots"></div>
+    <div class="tut2-actions">
+      <button class="tut2-btn-skip" id="kttmTut2Skip">Skip tutorial</button>
+      <button class="tut2-btn-back" id="kttmTut2Back" disabled>Back</button>
+      <button class="tut2-btn-next" id="kttmTut2Next">Next</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const STEPS = [
+    {
+      target: 'tutorialRecordsTable',
+      title:  'All IP Records',
+      desc:   'All your IP records are listed in this table. Each row shows the record details. You can click any row to see more information.',
+    },
+    {
+      target: 'tutorialViewBtn',
+      title:  'View a Record',
+      desc:   'Click View to open a read-only panel showing all details of that IP record, including its audit trail and filing history.',
+    },
+    {
+      target: 'tutorialEditBtn',
+      title:  'Edit a Record',
+      desc:   'Click Edit to modify an existing IP record. You can update its status, registration number, GDrive link, remarks, and more.',
+    },
+  ];
+
+  let current = 0;
+  const TOTAL = STEPS.length;
+  const PAD   = 12;
+
+  const overlay = document.getElementById('kttmTut2Overlay');
+  const hole    = document.getElementById('kttmTut2Hole');
+  const pulse   = document.getElementById('kttmTut2Pulse');
+  const card    = document.getElementById('kttmTut2Card');
+  const labelEl = document.getElementById('kttmTut2Label');
+  const titleEl = document.getElementById('kttmTut2Title');
+  const descEl  = document.getElementById('kttmTut2Desc');
+  const dotsEl  = document.getElementById('kttmTut2Dots');
+  const skipBtn = document.getElementById('kttmTut2Skip');
+  const backBtn = document.getElementById('kttmTut2Back');
+  const nextBtn = document.getElementById('kttmTut2Next');
+
+  function syncNavButtons() {
+    backBtn.disabled = current === 0;
+  }
+
+  function buildDots() {
+    dotsEl.innerHTML = STEPS.map((_, i) =>
+      `<div class="tut2-dot${i === current ? ' active' : ''}" id="tut2-dot-${i}"></div>`
+    ).join('');
+  }
+
+  function showStep(idx) {
+    const step  = STEPS[idx];
+    const el    = document.getElementById(step.target);
+    if (!el) { goNext(); return; }
+
+    // For steps targeting buttons inside the horizontally-scrollable table
+    // (View / Edit), scroll the table wrapper all the way to the right first
+    // so the Actions column is fully visible before we measure and spotlight it.
+    const tableWrap = document.getElementById('mainTableWrap');
+    const needsTableScroll = (step.target === 'tutorialViewBtn' || step.target === 'tutorialEditBtn');
+
+    if (needsTableScroll && tableWrap) {
+      const maxScroll = tableWrap.scrollWidth - tableWrap.clientWidth;
+      const alreadyScrolled = tableWrap.scrollLeft >= maxScroll - 2;
+      if (alreadyScrolled) {
+        // Already at the right edge — no scroll needed, highlight immediately
+        positionCard(el, idx);
+      } else {
+        tableWrap.scrollTo({ left: tableWrap.scrollWidth, behavior: 'smooth' });
+        setTimeout(() => positionCard(el, idx), 420);
+      }
+      return;
+    }
+
+    const r = el.getBoundingClientRect();
+    // Scroll into view if off-screen vertically
+    if (r.top < 0 || r.bottom > window.innerHeight) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+      setTimeout(() => positionCard(el, idx), 380);
+    } else {
+      positionCard(el, idx);
+    }
+  }
+
+  function positionCard(el, idx) {
+    const r = el.getBoundingClientRect();
+    const x = Math.floor(r.left  - PAD);
+    const y = Math.floor(r.top   - PAD);
+    const w = Math.ceil(r.width  + PAD * 2);
+    const h = Math.ceil(r.height + PAD * 2);
+
+    hole.setAttribute('x',      x);
+    hole.setAttribute('y',      y);
+    hole.setAttribute('width',  w);
+    hole.setAttribute('height', h);
+
+    pulse.style.left   = x + 'px';
+    pulse.style.top    = y + 'px';
+    pulse.style.width  = w + 'px';
+    pulse.style.height = h + 'px';
+
+    labelEl.textContent = `Step ${idx + 1} of ${TOTAL}`;
+    titleEl.textContent = STEPS[idx].title;
+    descEl.textContent  = STEPS[idx].desc;
+    nextBtn.textContent = (idx === TOTAL - 1) ? 'Finish' : 'Next';
+    syncNavButtons();
+
+    document.querySelectorAll('.tut2-dot').forEach((d, i) => {
+      d.classList.toggle('active', i === idx);
+    });
+
+    // Force a reflow so the card's new content is measured correctly
+    // (especially important when the card is already visible from the previous step)
+    card.classList.remove('tut-hidden');
+    void card.offsetHeight;
+
+    const cardW  = Math.min(340, window.innerWidth - 32);
+    const cardH  = card.offsetHeight || 210;
+    const vpW    = window.innerWidth;
+    const vpH    = window.innerHeight;
+    const gap    = 16;
+
+    let left = x;
+    let top  = y + h + gap;
+
+    if (left + cardW > vpW - gap) left = vpW - cardW - gap;
+    if (left < gap)               left = gap;
+    if (top  + cardH > vpH - gap) top  = y - cardH - gap;
+    if (top  < gap)               top  = gap;
+
+    card.style.left  = left + 'px';
+    card.style.top   = top  + 'px';
+    card.style.width = cardW + 'px';
+  }
+
+  function pickRandomRecordId() {
+    // Collect all record IDs from the rendered table rows
+    const cells = document.querySelectorAll('#mainTableBody .record-id-cell');
+    const ids = Array.from(cells)
+      .map(td => td.textContent.trim())
+      .filter(id => id && id !== '—');
+    if (!ids.length) return null;
+    return ids[Math.floor(Math.random() * ids.length)];
+  }
+
+  function goNext() {
+    current++;
+    if (current >= TOTAL) {
+      hideOverlay();
+      finishAndNavigate();
+    } else {
+      showStep(current);
+    }
+  }
+
+  function goBack() {
+    if (current === 0) return;
+    current--;
+    showStep(current);
+  }
+
+  async function finishAndNavigate() {
+    // Set flag so Modifiedrecords page knows to run its tutorial
+    sessionStorage.setItem('kttm_tut_page', 'done_viewrecord');
+    // Pick a random record to navigate to
+    const randomId = pickRandomRecordId();
+    if (randomId) {
+      window.location.href = '/record-changes/' + encodeURIComponent(randomId);
+    } else {
+      // No records in the table — cannot navigate to a record detail page.
+      // Clear the stale flag so the Modifiedrecords tutorial doesn't fire
+      // on a future navigation, and silently end the chain here.
+      sessionStorage.removeItem('kttm_tut_page');
+      console.warn('[KTTM Tutorial] finishAndNavigate: no records found in table — tutorial chain stopped at Phase 2.');
+    }
+    // (No /tutorial/dismiss call here — tutorial continues on the next page)
+  }
+
+  function hideOverlay() {
+    card.classList.add('tut-hidden');
+    overlay.style.display = 'none';
+    document.getElementById('kttmTut2Svg').style.display = 'none';
+    pulse.style.display = 'none';
+  }
+
+  async function dismiss() {
+    hideOverlay();
+    sessionStorage.removeItem('kttm_tut_page');
+    // On skip, end the tutorial chain permanently — same as finishing
+    try {
+      await fetch('/tutorial/dismiss', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json',
+                   'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+      });
+    } catch(e) {}
+    // No redirect needed — user is already on /records, just let them use the page
+  }
+
+  skipBtn.addEventListener('click', dismiss);
+  backBtn.addEventListener('click', goBack);
+  nextBtn.addEventListener('click', goNext);
+
+  let resizeTimer;
+  window.addEventListener('resize', function() {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => showStep(current), 120);
+  });
+
+  function boot() {
+    // Only run if we arrived here from the new record tutorial
+    if (sessionStorage.getItem('kttm_tut_page') !== 'done_newrecord') return;
+
+    // Guard: critical tutorial targets must be in the DOM before we start.
+    // tutorialViewBtn and tutorialEditBtn are rendered only on the first table
+    // row — if records haven't rendered yet the tutorial would race through all
+    // steps via the null-element goNext() fallback, potentially calling
+    // finishAndNavigate() before any row exists and silently skipping the
+    // Modifiedrecords page entirely.
+    const requiredIds = ['tutorialViewBtn', 'tutorialEditBtn'];
+    const allPresent  = requiredIds.every(id => document.getElementById(id));
+
+    if (!allPresent) {
+      // Retry up to ~3 s (18 attempts × 170 ms) then give up silently.
+      if ((boot._retries = (boot._retries || 0) + 1) <= 18) {
+        setTimeout(boot, 170);
+      }
+      return;
+    }
+
+    boot._retries = 0;
+    // Show overlay elements now that we're confirmed starting
+    overlay.style.display = '';
+    document.getElementById('kttmTut2Svg').style.display = '';
+    pulse.style.display = '';
+    buildDots();
+    showStep(0);
+  }
+
+  if (document.readyState === 'complete') {
+    setTimeout(boot, 400);
+  } else {
+    window.addEventListener('load', () => setTimeout(boot, 400));
+  }
+})();
+</script>
+@endif
+
+
+{{-- ══════════════════════════════════════════════════════
+     EDIT MODAL TUTORIAL (Phase 4)
+     Triggered via sessionStorage kttm_tut_page === 'done_editnav'.
+     Arrives from Record Detail page Edit button.
+     Spotlights the auto-opened Edit Record modal and explains
+     the difference between editing from here vs from the record detail.
+══════════════════════════════════════════════════════ --}}
+<style>
+  #editRecordModal.tutorial-highlight {
+    background: transparent;
+    backdrop-filter: none;
+  }
+  #editRecordModal.tutorial-highlight .modal-box {
+    position: relative;
+    z-index: 9004;
+    opacity: 1;
+    box-shadow: 0 26px 72px rgba(15,23,42,.24), 0 0 0 1px rgba(255,255,255,.06);
+  }
+  #kttmTut4Card {
+    position: fixed; z-index: 9002;
+    background: #fff; border-radius: 18px;
+    padding: 22px 24px 18px;
+    width: min(360px, calc(100vw - 32px));
+    box-shadow: 0 24px 64px rgba(0,0,0,.22), 0 0 0 1px rgba(0,0,0,.06);
+    transition: top .32s cubic-bezier(.4,0,.2,1),
+                left .32s cubic-bezier(.4,0,.2,1),
+                opacity .22s ease;
+  }
+  #kttmTut4Card.tut-hidden { opacity: 0; pointer-events: none; }
+  .tut4-label {
+    font-size: 0.62rem; font-weight: 800; letter-spacing: .1em;
+    text-transform: uppercase; color: #A52C30; margin-bottom: 6px;
+    font-family: 'DM Mono', monospace;
+  }
+  .tut4-title {
+    font-size: 1.02rem; font-weight: 800; color: #0F172A;
+    letter-spacing: -.2px; margin-bottom: 7px; line-height: 1.3;
+  }
+  .tut4-desc {
+    font-size: 0.78rem; color: #64748B; line-height: 1.65; font-weight: 500;
+  }
+  .tut4-divider {
+    margin: 12px 0; border: none; border-top: 1px solid #f1f5f9;
+  }
+  .tut4-compare {
+    display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px;
+  }
+  .tut4-compare-row {
+    display: flex; gap: 10px; align-items: flex-start;
+    background: #f8fafc; border-radius: 10px; padding: 10px 12px;
+    border: 1.5px solid #e2e8f0;
+  }
+  .tut4-compare-row.highlight { border-color: rgba(165,44,48,.25); background: rgba(165,44,48,.04); }
+  .tut4-compare-icon {
+    width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem;
+  }
+  .tut4-compare-icon.from-detail { background: linear-gradient(135deg,#A52C30,#7E1F23); color: #fff; }
+  .tut4-compare-icon.from-table  { background: #e2e8f0; color: #475569; }
+  .tut4-compare-text { flex: 1; min-width: 0; }
+  .tut4-compare-label { font-size: 0.68rem; font-weight: 800; color: #0F172A; margin-bottom: 3px; }
+  .tut4-compare-sub   { font-size: 0.68rem; color: #64748B; line-height: 1.5; }
+  .tut4-footer {
+    display: flex; align-items: center; justify-content: flex-end;
+    margin-top: 16px;
+  }
+  .tut4-btn-done {
+    padding: 9px 22px; border-radius: 10px; border: none;
+    background: linear-gradient(135deg, #A52C30, #7E1F23);
+    font-family: inherit; font-size: 0.78rem; font-weight: 800;
+    color: #fff; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(165,44,48,.3);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .tut4-btn-done:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(165,44,48,.4); }
+  #kttmTut4Pulse {
+    position: fixed; z-index: 9003; border-radius: 20px;
+    border: 2.5px solid #F0C860; pointer-events: none;
+    animation: tut4Pulse 1.8s ease-out infinite;
+    transition: all .32s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes tut4Pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(240,200,96,.55); }
+    70%  { box-shadow: 0 0 0 14px rgba(240,200,96,0); }
+    100% { box-shadow: 0 0 0 0 rgba(240,200,96,0); }
+  }
+</style>
+
+<div id="kttmTut4Pulse" style="display:none;position:fixed;z-index:9003;pointer-events:none;"></div>
+
+<div id="kttmTut4Card" class="tut-hidden">
+  <div class="tut4-label">Final Step · Edit Record</div>
+  <div class="tut4-title">The Edit Form — Pre-filled &amp; Ready</div>
+  <div class="tut4-desc">
+    This edit form opened automatically because you came from the Record Detail page.
+    The record's current data is already filled in — just change what you need and hit <strong>Save Changes</strong>.
+  </div>
+  <hr class="tut4-divider">
+  <div class="tut4-compare">
+    <div class="tut4-compare-row highlight">
+      <div class="tut4-compare-icon from-detail">✦</div>
+      <div class="tut4-compare-text">
+        <div class="tut4-compare-label">Edit from Record Detail</div>
+        <div class="tut4-compare-sub">Navigates back to Records and auto-opens this form pre-filled with the record you were viewing. Best when you've just reviewed the audit trail and want to make a change.</div>
+      </div>
+    </div>
+    <div class="tut4-compare-row">
+      <div class="tut4-compare-icon from-table">✎</div>
+      <div class="tut4-compare-text">
+        <div class="tut4-compare-label">Edit from Records Table Row</div>
+        <div class="tut4-compare-sub">Opens the same form inline without leaving the page. Best for quick edits directly from the records list without needing to view the full audit trail first.</div>
+      </div>
+    </div>
+  </div>
+  <div class="tut4-footer">
+    <button class="tut4-btn-done" id="kttmTut4Done">Got it — finish tutorial ✓</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  function boot() {
+    if (
+      sessionStorage.getItem('kttm_tut_page') === 'start_insights' &&
+      sessionStorage.getItem('kttm_tut_page_prev') === 'done_editnav'
+    ) {
+      sessionStorage.setItem('kttm_tut_page', 'done_editnav');
+      sessionStorage.removeItem('kttm_tut_page_prev');
+    }
+
+    if (sessionStorage.getItem('kttm_tut_page') !== 'done_editnav') return;
+
+    const pulse  = document.getElementById('kttmTut4Pulse');
+    const card   = document.getElementById('kttmTut4Card');
+    const doneBtn = document.getElementById('kttmTut4Done');
+
+    // Wait for the edit modal to be open (autoOpenEdit runs async)
+    function waitForModal(attempts) {
+      const modal    = document.getElementById('editRecordModal');
+      const modalBox = modal?.querySelector('.modal-box');
+      if (modal?.classList.contains('open') && modalBox) {
+        modal.classList.add('tutorial-highlight');
+        positionOnModal(modalBox);
+      } else if (attempts > 0) {
+        setTimeout(() => waitForModal(attempts - 1), 250);
+      }
+    }
+
+    function positionOnModal(modalBox) {
+      const r   = modalBox.getBoundingClientRect();
+      const pad = 8;
+
+      pulse.style.cssText = `
+        display: block;
+        left:   ${Math.floor(r.left   - pad)}px;
+        top:    ${Math.floor(r.top    - pad)}px;
+        width:  ${Math.ceil(r.width   + pad * 2)}px;
+        height: ${Math.ceil(r.height  + pad * 2)}px;
+        border-radius: 20px;
+      `;
+
+      // Place tutorial card to the left of the modal (or below on small screens)
+      card.classList.remove('tut-hidden');
+      void card.offsetHeight;
+
+      const cardW = Math.min(360, window.innerWidth - 32);
+      const cardH = card.offsetHeight || 280;
+      const gap   = 16;
+      const vpW   = window.innerWidth;
+      const vpH   = window.innerHeight;
+
+      let left = r.left - cardW - gap;
+      let top  = r.top;
+
+      // If no room on the left, put it below
+      if (left < gap) {
+        left = Math.min(r.left, vpW - cardW - gap);
+        top  = r.bottom + gap;
+      }
+      if (left < gap)               left = gap;
+      if (top + cardH > vpH - gap)  top  = vpH - cardH - gap;
+      if (top < gap)                top  = gap;
+
+      card.style.left  = left + 'px';
+      card.style.top   = top  + 'px';
+      card.style.width = cardW + 'px';
+    }
+
+    function finish() {
+      document.getElementById('editRecordModal')?.classList.remove('tutorial-highlight');
+      pulse.style.display = 'none';
+      card.classList.add('tut-hidden');
+      sessionStorage.setItem('kttm_tut_page', 'insights');
+      window.location.href = '/insights';
+    }
+
+    doneBtn.addEventListener('click', finish);
+
+    // Reposition on resize
+    let rt;
+    window.addEventListener('resize', () => {
+      clearTimeout(rt);
+      rt = setTimeout(() => {
+        const modal    = document.getElementById('editRecordModal');
+        const modalBox = modal?.querySelector('.modal-box');
+        if (modal?.classList.contains('open') && modalBox) positionOnModal(modalBox);
+      }, 120);
+    });
+
+    waitForModal(20);
+  }
+
+  if (document.readyState === 'complete') setTimeout(boot, 400);
+  else window.addEventListener('load', () => setTimeout(boot, 400));
 })();
 </script>
 

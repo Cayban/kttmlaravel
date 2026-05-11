@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="csrf-token" content="{{ csrf_token() }}" />
   <title>KTTM — Dashboard</title>
+  <link rel="icon" type="image/png" href="{{ asset('images/KTTMLOGOFAV-512.png') }}">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,7 +23,7 @@
       --line: rgba(15,23,42,.08);
       --card: #FFFFFF;
       --sidebar-w: 72px;
-      --bg: #F1F4F9;
+      --bg: #EEE9E9;
       --pad-x: clamp(0.75rem, 2.5vw, 1.75rem);
       --shell-max: 1440px;
     }
@@ -32,7 +33,9 @@
 
     body {
       font-family: 'Plus Jakarta Sans', sans-serif;
-      background: var(--bg);
+      background-color: #EEE9E9;
+      background-image: linear-gradient(rgba(165,44,48,.055) 1px, transparent 1px), linear-gradient(90deg, rgba(165,44,48,.055) 1px, transparent 1px);
+      background-size: 28px 28px;
       color: var(--ink);
       min-height: 100vh;
       overflow-x: hidden;
@@ -268,12 +271,7 @@
       max-width: var(--shell-max);
       margin: 0 auto;
       box-sizing: border-box;
-      background-color: var(--bg);
-      background-image: url('{{ asset("images/abstractBGIMAGE12.png") }}');
-      background-repeat: no-repeat;
-      background-position: center center;
-      background-size: cover;
-      background-attachment: fixed;
+      background: transparent;
     }
 
     /* ── MAINTENANCE BANNER ── */
@@ -436,6 +434,8 @@
     .ifo-yr-btn { padding: 3px 8px; border-radius: 6px; font-size: 0.57rem; font-weight: 700; color: rgba(255,255,255,.5); cursor: pointer; border: none; background: none; font-family: inherit; transition: background .15s, color .15s; letter-spacing: .03em; white-space: nowrap; }
     .ifo-yr-btn.active { background: rgba(255,255,255,.18); color: #fff; }
     .ifo-yr-btn:hover:not(.active) { background: rgba(255,255,255,.09); color: rgba(255,255,255,.8); }
+    .ifo-year-select { margin-left: 8px; border-radius: 6px; padding: 2px 8px; background: rgba(255,255,255,.15); color: #fff; border: none; font-family: inherit; font-size: 0.72rem; font-weight: 600; letter-spacing: .01em; outline: none; }
+    .ifo-year-select option { color: var(--ink); font-family: 'Plus Jakarta Sans', sans-serif; }
 
     /* ── RIGHT COLUMN ── */
     .right-col { display: flex; flex-direction: column; gap: 10px; }
@@ -1920,7 +1920,16 @@
   $total = max(1, count($allRecords));
   $statusCounts = collect($allRecords)->countBy('status')->sortDesc();
   $typeCounts   = collect($allRecords)->countBy('type')->sortDesc();
-  $campusCounts = collect($allRecords)->countBy('campus')->sortDesc()->take(5);
+  $campusCounts = collect($allRecords)
+    ->groupBy(function ($record) {
+      $campus = trim((string)($record['campus'] ?? ''));
+      return in_array(strtolower($campus), ['', 'n/a', 'na', 'none', 'null'], true)
+        ? 'No Campus'
+        : $campus;
+    })
+    ->map(fn ($records) => $records->count())
+    ->sortDesc()
+    ->take(5);
   $pct = fn($n) => (int) round(($n / $total) * 100);
   $statusTop = $statusCounts->take(6);
   $typeTop   = $typeCounts->take(3);
@@ -2014,6 +2023,7 @@
     'pending'      => 'Pending',
   ];
   $registered = collect($allRecords)->filter(fn($r) => strtolower($r['status'] ?? '') === 'registered')->count();
+  $filed      = collect($allRecords)->filter(fn($r) => strtolower($r['status'] ?? '') === 'filed')->count();
   $pending    = collect($allRecords)->filter(fn($r) => in_array(strtolower($r['status'] ?? ''), ['pending','under review','filed']))->count();
 @endphp
 
@@ -2055,7 +2065,7 @@
     </div>
   </div>
 
-  <nav class="sidebar-nav">
+  <nav class="sidebar-nav" id="tutorialSidebar">
     <a href="{{ url('/home') }}" class="nav-item active">
       <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
@@ -2194,7 +2204,7 @@
         </div>
       </div>
 
-      <a href="{{ $urlNew }}" class="btn-primary" title="New Record">
+      <a href="{{ $urlNew }}" class="btn-primary" id="tutorialNewRecord" title="New Record">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         <span class="btn-primary-text">New Record</span>
       </a>
@@ -2206,13 +2216,13 @@
   <div class="content">
 
     {{-- KPI STRIP --}}
-    <div class="kpi-strip">
+    <div class="kpi-strip" id="tutorialKpi">
       <div class="kpi-card c1 anim anim-1">
         <div class="kpi-icon"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
         <div class="kpi-body">
-          <div class="kpi-val">{{ $kpis['my_open'] ?? 0 }}</div>
-          <div class="kpi-label">Open Records</div>
-          <div class="kpi-sub">Not yet registered</div>
+          <div class="kpi-val">{{ $filed }}</div>
+          <div class="kpi-label">Filed</div>
+          <div class="kpi-sub">Filed IP records</div>
         </div>
       </div>
       <div class="kpi-card c2 anim anim-2">
@@ -2269,7 +2279,7 @@
                 <button class="ifo-yr-btn active" onclick="filterIFO(this,'all')">All</button>
                 <button class="ifo-yr-btn" onclick="filterIFO(this,'5')">Last 5</button>
                 <button class="ifo-yr-btn" onclick="filterIFO(this,'3')">Last 3</button>
-                <select id="ifoYearSelect" style="margin-left:8px; border-radius:6px; padding:2px 8px; background:rgba(255,255,255,.15); color:#222; border:none; font-size:1rem;" onchange="filterIFO(this,'year')">
+                <select id="ifoYearSelect" class="ifo-year-select" onchange="filterIFO(this,'year')">
                   <option value="">Year</option>
                   @foreach($allYears as $yr)
                     <option value="{{ $yr }}">{{ $yr }}</option>
@@ -2394,9 +2404,9 @@
             <div class="qs-desc">Filed IPs</div>
           </div>
           <div class="qs-card gold-card anim anim-4">
-            <div class="qs-label">Pending</div>
-            <div class="qs-val">{{ $pending }}</div>
-            <div class="qs-desc">In progress</div>
+            <div class="qs-label">Filed</div>
+            <div class="qs-val">{{ $filed }}</div>
+            <div class="qs-desc">Filed IPs</div>
           </div>
         </div>
         <div class="panel-card anim anim-5">
@@ -2418,7 +2428,7 @@
           <div class="campus-wrap">
             @forelse($campusCounts as $campus => $count)
             <div class="campus-row">
-              <div class="campus-name">{{ $campus ?: '—' }}</div>
+              <div class="campus-name">{{ $campus }}</div>
               <div class="campus-badge">{{ $count }}</div>
             </div>
             @empty
@@ -2440,9 +2450,9 @@
 {{-- ══════════════ STATUS DETAIL MODAL ══════════════ --}}
 @php
   $smTabs = [
-    ['key' => 'unregistered',   'label' => 'Unregistered',   'color' => '#A52C30', 'records' => $unregisteredRecords  ?? []],
-    ['key' => 'under-review',   'label' => 'Under Review',   'color' => '#d97706', 'records' => $underReviewRecords   ?? []],
-    ['key' => 'recently-filed', 'label' => 'Recently Filed', 'color' => '#2563eb', 'records' => $recentlyFiledRecords ?? []],
+    ['key' => 'needs-attention','label' => 'Needs Attention', 'color' => '#A52C30', 'records' => $needsAttentionRecords ?? []],
+    ['key' => 'filed',          'label' => 'Filed',          'color' => '#2563eb', 'records' => $recentlyFiledRecords ?? []],
+    ['key' => 'close-to-expiry','label' => 'Close to Expiry', 'color' => '#d97706', 'records' => $closeToExpiryRecords ?? []],
   ];
 @endphp
 <div class="status-modal-overlay" id="statusDetailModal">
@@ -3431,5 +3441,290 @@
 
 })();
 </script>
+
+{{-- ============================================================
+     TUTORIAL SPOTLIGHT ENGINE
+     Only rendered when $showTutorial === true.
+     Dismissed via POST /tutorial/dismiss.
+============================================================ --}}
+@if($showTutorial)
+<style>
+  #kttmTutOverlay {
+    position: fixed; inset: 0; z-index: 9000; pointer-events: all;
+  }
+  #kttmTutSvg {
+    position: fixed; inset: 0; width: 100%; height: 100%;
+    z-index: 9001; pointer-events: none;
+  }
+  #kttmTutCard {
+    position: fixed; z-index: 9002;
+    background: #fff; border-radius: 18px;
+    padding: 22px 24px 18px;
+    width: min(340px, calc(100vw - 32px));
+    box-shadow: 0 24px 64px rgba(0,0,0,.22), 0 0 0 1px rgba(0,0,0,.06);
+    transition: top .32s cubic-bezier(.4,0,.2,1),
+                left .32s cubic-bezier(.4,0,.2,1),
+                opacity .22s ease;
+  }
+  #kttmTutCard.tut-hidden { opacity: 0; pointer-events: none; }
+  .tut-step-label {
+    font-size: 0.62rem; font-weight: 800; letter-spacing: .1em;
+    text-transform: uppercase; color: #A52C30; margin-bottom: 6px;
+    font-family: 'DM Mono', monospace;
+  }
+  .tut-title {
+    font-size: 1rem; font-weight: 800; color: #0F172A;
+    margin-bottom: 6px; line-height: 1.3;
+  }
+  .tut-desc {
+    font-size: 0.82rem; color: #64748B; line-height: 1.6; margin-bottom: 16px;
+  }
+  .tut-footer {
+    display: flex; align-items: center;
+    justify-content: space-between; gap: 10px;
+  }
+  .tut-dots { display: flex; gap: 5px; align-items: center; }
+  .tut-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #e2e8f0; transition: background .2s, width .2s;
+  }
+  .tut-dot.active { background: #A52C30; width: 18px; border-radius: 3px; }
+  .tut-actions { display: flex; gap: 8px; }
+  .tut-btn-skip {
+    padding: 8px 14px; border-radius: 10px;
+    border: 1.5px solid #e2e8f0; background: none;
+    font-family: inherit; font-size: 0.75rem; font-weight: 700;
+    color: #94a3b8; cursor: pointer; transition: all .15s;
+  }
+  .tut-btn-skip:hover { border-color: #A52C30; color: #A52C30; }
+  .tut-btn-back {
+    padding: 8px 14px; border-radius: 10px;
+    border: 1.5px solid #e2e8f0; background: #fff;
+    font-family: inherit; font-size: 0.75rem; font-weight: 700;
+    color: #64748B; cursor: pointer; transition: all .15s;
+  }
+  .tut-btn-back:hover:not(:disabled) { border-color: #A52C30; color: #A52C30; }
+  .tut-btn-back:disabled { opacity: .45; cursor: not-allowed; }
+  .tut-btn-next {
+    padding: 8px 20px; border-radius: 10px; border: none;
+    background: linear-gradient(135deg, #A52C30, #7E1F23);
+    font-family: inherit; font-size: 0.75rem; font-weight: 800;
+    color: #fff; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(165,44,48,.3);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .tut-btn-next:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(165,44,48,.4); }
+  #kttmTutPulse {
+    position: fixed; z-index: 9003; border-radius: 14px;
+    border: 2.5px solid #F0C860;
+    pointer-events: none;
+    animation: tutPulse 1.8s ease-out infinite;
+    transition: all .32s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes tutPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(240,200,96,.55); }
+    70%  { box-shadow: 0 0 0 10px rgba(240,200,96,0); }
+    100% { box-shadow: 0 0 0 0 rgba(240,200,96,0); }
+  }
+</style>
+
+<div id="kttmTutOverlay"></div>
+
+<svg id="kttmTutSvg" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <mask id="kttmTutMask">
+      <rect width="100%" height="100%" fill="white"/>
+      <rect id="kttmTutHole" x="0" y="0" width="0" height="0" rx="14" fill="black"/>
+    </mask>
+  </defs>
+  <rect width="100%" height="100%" fill="rgba(10,14,26,0.72)" mask="url(#kttmTutMask)"/>
+</svg>
+
+<div id="kttmTutPulse"></div>
+
+<div id="kttmTutCard" class="tut-hidden">
+  <div class="tut-step-label" id="kttmTutLabel">Step 1 of 5</div>
+  <div class="tut-title"      id="kttmTutTitle"></div>
+  <div class="tut-desc"       id="kttmTutDesc"></div>
+  <div class="tut-footer">
+    <div class="tut-dots"     id="kttmTutDots"></div>
+    <div class="tut-actions">
+      <button class="tut-btn-skip" id="kttmTutSkip">Skip tutorial</button>
+      <button class="tut-btn-back" id="kttmTutBack" disabled>Back</button>
+      <button class="tut-btn-next" id="kttmTutNext">Next</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const STEPS = [
+    {
+      target: 'tutorialSidebar',
+      title:  'Navigation Sidebar',
+      desc:   'Use this sidebar to move between Dashboard, Records, Insights, Calendar, and your Profile. It is always visible on every page.',
+    },
+    {
+      target: 'tutorialKpi',
+      title:  'Your Key Numbers',
+      desc:   'These cards give you an instant snapshot of your IP records: how many are open, need attention, are due soon, and the total count.',
+    },
+    {
+      target: 'bellBtn',
+      title:  "Today's Tasks",
+      desc:   'Click the bell to see tasks scheduled for today. A red badge appears when there are pending items that need your action.',
+    },
+    {
+      target: 'tutorialNewRecord',
+      title:  'Add a New IP Record',
+      desc:   'Use this button to register a new intellectual property record. It opens a form where you fill in all details including type, owner, campus, and more.',
+    },
+    {
+      target: 'howToUseBtn',
+      title:  'How To Use Guide',
+      desc:   'Need a refresher on any feature? Click this button anytime to open the full How To Use guide, available from every page.',
+    },
+  ];
+
+  let current = 0;
+  const TOTAL = STEPS.length;
+  const PAD   = 12;
+
+  const overlay = document.getElementById('kttmTutOverlay');
+  const hole    = document.getElementById('kttmTutHole');
+  const pulse   = document.getElementById('kttmTutPulse');
+  const card    = document.getElementById('kttmTutCard');
+  const labelEl = document.getElementById('kttmTutLabel');
+  const titleEl = document.getElementById('kttmTutTitle');
+  const descEl  = document.getElementById('kttmTutDesc');
+  const dotsEl  = document.getElementById('kttmTutDots');
+  const skipBtn = document.getElementById('kttmTutSkip');
+  const backBtn = document.getElementById('kttmTutBack');
+  const nextBtn = document.getElementById('kttmTutNext');
+
+  function syncNavButtons() {
+    backBtn.disabled = current === 0;
+  }
+
+  function buildDots() {
+    dotsEl.innerHTML = STEPS.map((_, i) =>
+      `<div class="tut-dot${i === current ? ' active' : ''}" id="tut-dot-${i}"></div>`
+    ).join('');
+  }
+
+  function showStep(idx) {
+    const step = STEPS[idx];
+    const el   = document.getElementById(step.target);
+    if (!el) { goNext(); return; }
+
+    const r = el.getBoundingClientRect();
+    const x = Math.floor(r.left   - PAD);
+    const y = Math.floor(r.top    - PAD);
+    const w = Math.ceil(r.width   + PAD * 2);
+    const h = Math.ceil(r.height  + PAD * 2);
+
+    hole.setAttribute('x',      x);
+    hole.setAttribute('y',      y);
+    hole.setAttribute('width',  w);
+    hole.setAttribute('height', h);
+
+    pulse.style.left   = x + 'px';
+    pulse.style.top    = y + 'px';
+    pulse.style.width  = w + 'px';
+    pulse.style.height = h + 'px';
+
+    labelEl.textContent = `Step ${idx + 1} of ${TOTAL}`;
+    titleEl.textContent = step.title;
+    descEl.textContent  = step.desc;
+    nextBtn.textContent = (idx === TOTAL - 1) ? 'Finish' : 'Next';
+    syncNavButtons();
+
+    document.querySelectorAll('.tut-dot').forEach((d, i) => {
+      d.classList.toggle('active', i === idx);
+    });
+
+    const cardW  = Math.min(340, window.innerWidth - 32);
+    const cardH  = card.offsetHeight || 210;
+    const vpW    = window.innerWidth;
+    const vpH    = window.innerHeight;
+    const gap    = 16;
+
+    let left = x;
+    let top  = y + h + gap;
+
+    if (left + cardW > vpW - gap) left = vpW - cardW - gap;
+    if (left < gap)               left = gap;
+    if (top  + cardH > vpH - gap) top  = y - cardH - gap;
+    if (top  < gap)               top  = gap;
+
+    card.style.left  = left + 'px';
+    card.style.top   = top  + 'px';
+    card.style.width = cardW + 'px';
+    card.classList.remove('tut-hidden');
+  }
+
+  function goNext() {
+    current++;
+    if (current >= TOTAL) {
+      hideOverlay();
+      sessionStorage.setItem('kttm_tut_page', 'records');
+      window.location.href = '{{ url('/records') }}';
+    } else {
+      showStep(current);
+    }
+  }
+
+  function goBack() {
+    if (current === 0) return;
+    current--;
+    showStep(current);
+  }
+
+  function hideOverlay() {
+    card.classList.add('tut-hidden');
+    overlay.style.display = 'none';
+    document.getElementById('kttmTutSvg').style.display = 'none';
+    pulse.style.display = 'none';
+  }
+
+  async function dismiss() {
+    hideOverlay();
+    try {
+      await fetch('/tutorial/dismiss', {
+        method:  'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept':        'application/json',
+          'X-CSRF-TOKEN':  document.querySelector('meta[name="csrf-token"]').content,
+        },
+        credentials: 'same-origin',
+      });
+    } catch(e) { /* silent */ }
+  }
+
+  skipBtn.addEventListener('click', dismiss);
+  backBtn.addEventListener('click', goBack);
+  nextBtn.addEventListener('click', goNext);
+
+  let resizeTimer;
+  window.addEventListener('resize', function() {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => showStep(current), 120);
+  });
+
+  function boot() {
+    buildDots();
+    showStep(0);
+  }
+
+  if (document.readyState === 'complete') {
+    setTimeout(boot, 600);
+  } else {
+    window.addEventListener('load', () => setTimeout(boot, 600));
+  }
+})();
+</script>
+@endif
+
 </body>
 </html>

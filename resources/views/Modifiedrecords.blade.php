@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="csrf-token" content="{{ csrf_token() }}" />
   <title>KTTM — Record Detail</title>
+  <link rel="icon" type="image/png" href="{{ asset('images/KTTMLOGOFAV-512.png') }}">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -234,6 +235,22 @@
     }
     .btn-edit:hover { background: var(--maroon-light); border-color: var(--maroon); color: var(--maroon); }
 
+    .btn-attention {
+      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+      background: #fffbeb; color: #92400e;
+      border: 1.5px solid #fde68a; cursor: pointer;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: clamp(0.72rem, 0.18vw + 0.68rem, 0.78rem);
+      font-weight: 800;
+      padding: clamp(7px, 1.2vw, 8px) clamp(12px, 2vw, 16px);
+      border-radius: 11px;
+      transition: all .18s;
+      flex: 0 1 auto; max-width: 100%; box-sizing: border-box;
+      white-space: nowrap;
+    }
+    .btn-attention:hover:not(:disabled) { background: #fef3c7; border-color: #d97706; color: #7c2d12; transform: translateY(-1px); }
+    .btn-attention:disabled { opacity: .58; cursor: not-allowed; transform: none; }
+
     .btn-archive {
       display: inline-flex; align-items: center; justify-content: center; gap: 7px;
       background: var(--bg); color: var(--muted);
@@ -264,6 +281,12 @@
       padding: clamp(18px, 3vw, 24px) clamp(18px, 3vw, 28px);
       box-shadow: 0 12px 40px rgba(165,44,48,.30);
       position: relative; overflow: hidden; margin-bottom: 20px;
+      /* Match .content horizontal constraints so edges align */
+      max-width: var(--shell-max);
+      margin-left: auto;
+      margin-right: auto;
+      box-sizing: border-box;
+      width: calc(100% - var(--pad-x) * 2);
     }
     .hero-card::selection { background: rgba(255,255,255,.18); }
     /* decorative orbs */
@@ -357,14 +380,22 @@
 
     /* ══════════ CONTENT AREA ══════════ */
     .content {
-      padding: clamp(14px, 2.5vw, 24px) var(--pad-x);
-      flex: 1;
-      width: 100%;
-      max-width: var(--shell-max);
-      margin: 0 auto;
-      box-sizing: border-box;
-      background: var(--bg) url('{{ asset("images/abstractBGIMAGE12.png") }}') no-repeat right center;
-      background-size: cover;
+  padding: clamp(14px, 2.5vw, 24px) var(--pad-x);
+  flex: 1;
+  width: 100%;
+  max-width: var(--shell-max);
+  margin: 0 auto;
+  box-sizing: border-box;
+  background-color: #EEE9E9;
+  background-image: linear-gradient(rgba(165,44,48,.055) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(165,44,48,.055) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+    @media (max-width: 640px) {
+      .content {
+        background-position: center top;
+        background-size: auto 100%;
+      }
     }
     /* ══════════ MAIN GRID ══════════ */
     .main-grid {
@@ -695,7 +726,7 @@
         margin-left: auto;
         max-width: 140px;
       }
-      .btn-gold, .btn-edit, .btn-archive {
+      .btn-gold, .btn-edit, .btn-attention, .btn-archive {
         padding: 8px 10px;
         border-radius: 12px;
         font-size: 0;
@@ -703,7 +734,7 @@
         min-height: 38px;
         gap: 0;
       }
-      .btn-gold svg, .btn-edit svg, .btn-archive svg {
+      .btn-gold svg, .btn-edit svg, .btn-attention svg, .btn-archive svg {
         width: 14px;
         height: 14px;
       }
@@ -809,7 +840,7 @@
   $urlRecords   = url('/records');
   $urlInsights  = url('/insights');
   $urlNew       = url('/ipassets/create');
-  $urlLogout    = url('/logout');
+  $urlLogout    = route('logout');
 
   $recordId = $recordId
       ?? request()->route('recordId')
@@ -951,14 +982,22 @@
       @endif
     </div>
     <div class="topbar-right">
-      <button type="button" id="refreshBtn" class="btn-gold" title="Refresh timeline">
+      <button type="button" id="refreshBtn" class="btn-gold" data-tut="tutRefreshBtn" title="Refresh timeline">
         <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
         <span class="btn-gold-label">Refresh</span>
       </button>
-      <a href="{{ $urlRecords }}?edit={{ urlencode($record['title'] ?? $recordId ?? '') }}" class="btn-edit" title="Edit this record">
+      <a href="{{ $urlRecords }}?edit={{ urlencode($recordId ?? ($record['id'] ?? '')) }}" class="btn-edit" id="tutEditBtn" title="Edit this record">
         <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         Edit
       </a>
+      <button type="button"
+              class="btn-attention"
+              id="markNeedsAttentionBtn"
+              title="{{ strtolower($record['status'] ?? '') === 'needs attention' ? 'Open the edit form to update this record' : 'Mark this record as needing attention' }}"
+              data-current-status="{{ strtolower($record['status'] ?? '') }}">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span id="markNeedsAttentionLabel">{{ strtolower($record['status'] ?? '') === 'needs attention' ? 'Record Updated?' : 'Mark Needs Attention' }}</span>
+      </button>
       <button type="button" class="btn-archive" title="Archive this record (coming soon)" disabled>
         <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
         Archive
@@ -968,7 +1007,7 @@
   </header>
 
   {{-- HERO RECORD CARD --}}
-  <div class="hero-card fade-up fade-up-1">
+  <div class="hero-card fade-up fade-up-1" id="tutHeroCard">
     <div class="hero-inner">
       <div class="hero-top">
         <div>
@@ -994,9 +1033,9 @@
               </span>
             @endif
             @if($record && !empty($record['status']))
-              <span class="hero-badge {{ $statusClass }}">
+              <span class="hero-badge {{ $statusClass }}" id="heroStatusBadge">
                 <svg width="9" height="9" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>
-                {{ $record['status'] }}
+                <span id="heroStatusText">{{ $record['status'] }}</span>
               </span>
             @endif
           </div>
@@ -1004,7 +1043,7 @@
       </div>
 
       {{-- Row 1: Reg. Number | Campus | College | Program --}}
-      <div class="hero-fields">
+      <div class="hero-fields" id="tutHeroFields">
       <div class="hero-field">
         <div class="hf-label">Reg. Number</div>
         <div class="hf-value @if(empty($record['registration_number'])) empty @endif" id="snapIpophl">
@@ -1131,7 +1170,7 @@
     <div class="main-grid">
 
       {{-- FILTER PANEL --}}
-      <aside class="filter-panel fade-up fade-up-2">
+      <aside class="filter-panel fade-up fade-up-2" id="tutFilterPanel">
         <div class="fp-header">
           <div class="fp-title">Filter Timeline</div>
           <div class="fp-sub">Narrow by action or keyword</div>
@@ -1166,13 +1205,19 @@
       </aside>
 
       {{-- TIMELINE --}}
-      <div class="timeline-card fade-up fade-up-3">
+      <div class="timeline-card fade-up fade-up-3" id="tutTimeline">
         <div class="tc-header">
           <div>
             <div class="tc-title">Change Timeline</div>
-            <div class="tc-sub">Click any event to view full field diff</div>
+            <div class="tc-sub" id="tlSubLabel">Showing last 30 days · click any event to view diff</div>
           </div>
-          <div class="tc-badge"># {{ $recordId ?? '—' }}</div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <div class="tc-badge"># {{ $recordId ?? '—' }}</div>
+            <button type="button" id="toggleHistoryBtn" style="display:inline-flex;align-items:center;gap:5px;font-size:0.65rem;font-weight:700;padding:4px 11px;border-radius:20px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.12);color:#fff;cursor:pointer;font-family:inherit;transition:background .15s;white-space:nowrap;">
+              <svg id="toggleHistoryIcon" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+              <span id="toggleHistoryLabel">Show all history</span>
+            </button>
+          </div>
         </div>
         <div class="timeline-body">
           <div class="tl-list" id="timeline">
@@ -1319,6 +1364,25 @@
 
   // ── State ──
   let allEvents = [];
+  let showAllHistory = false;
+  const DAYS_DEFAULT = 30;
+
+  document.getElementById('toggleHistoryBtn')?.addEventListener('click', function () {
+    showAllHistory = !showAllHistory;
+    const label = document.getElementById('toggleHistoryLabel');
+    const icon  = document.getElementById('toggleHistoryIcon');
+    const sub   = document.getElementById('tlSubLabel');
+    if (showAllHistory) {
+      if (label) label.textContent = 'Show less';
+      if (icon)  icon.innerHTML = '<line x1="8" y1="12" x2="16" y2="12"/><circle cx="12" cy="12" r="9"/>';
+      if (sub)   sub.textContent = 'Showing full history · click any event to view diff';
+    } else {
+      if (label) label.textContent = 'Show all history';
+      if (icon)  icon.innerHTML = '<circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>';
+      if (sub)   sub.textContent = 'Showing last 30 days · click any event to view diff';
+    }
+    applyFilters();
+  });
 
   // ── Render timeline ──
   function renderTimeline(events){
@@ -1413,13 +1477,22 @@
     openModal('eventModal');
   }
 
-  // ── Filters ──
   function applyFilters(){
     const needle = (document.getElementById('searchInput')?.value  || '').trim();
     const action = (document.getElementById('actionFilter')?.value || '').trim().toLowerCase();
     const sort   = (document.getElementById('sortFilter')?.value   || 'desc').trim();
 
     let filtered = allEvents.slice();
+
+    // Collapse to last 30 days unless showAllHistory is true
+    if (!showAllHistory) {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - DAYS_DEFAULT);
+      const recent = filtered.filter(e => new Date(e.timestamp || e.created_at) >= cutoff);
+      // Always show at least the most recent entry even if older than 30 days
+      filtered = recent.length ? recent : filtered.slice(0, 1);
+    }
+
     if(action) filtered = filtered.filter(e => {
       const a = String(e.action||'').toLowerCase();
       return a===action || (action==='modified' && a==='updated');
@@ -1444,6 +1517,7 @@
     };
 
     set('heroTitle',       record.title);
+    set('heroStatusText',  record.status);
     set('snapOwner',       record.owner);
     set('snapIpophl',      record.registration_number);
     set('snapCampus',      record.campus);
@@ -1453,6 +1527,22 @@
     set('snapRemarks',     record.remarks);
     set('snapRegistered',  fmtDate(record.registered));
     set('snapDateCreated', fmtDate(record.date_creation));
+
+    const statusBadge = document.getElementById('heroStatusBadge');
+    if(statusBadge){
+      const s = String(record.status || '').toLowerCase();
+      statusBadge.className = 'hero-badge ' + (s === 'registered' ? 'hb-status' : (['under review', 'filed', 'needs attention'].includes(s) ? 'hb-status st-attention' : 'hb-status st-default'));
+    }
+
+    const attentionBtn = document.getElementById('markNeedsAttentionBtn');
+    const attentionLabel = document.getElementById('markNeedsAttentionLabel');
+    if(attentionBtn && attentionLabel){
+      const isAttention = String(record.status || '').toLowerCase() === 'needs attention';
+      attentionBtn.disabled = false;
+      attentionBtn.dataset.currentStatus = String(record.status || '').toLowerCase();
+      attentionBtn.title = isAttention ? 'Open the edit form to update this record' : 'Mark this record as needing attention';
+      attentionLabel.textContent = isAttention ? 'Record Updated?' : 'Mark Needs Attention';
+    }
 
     // Computed due date + validity
     if(record.registered){
@@ -1517,6 +1607,53 @@
     if(btn){ btn.style.opacity='1'; btn.style.pointerEvents='auto'; }
   });
 
+  document.getElementById('markNeedsAttentionBtn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('markNeedsAttentionBtn');
+    const label = document.getElementById('markNeedsAttentionLabel');
+    if(!RECORD_ID || !btn || btn.disabled) return;
+
+    const currentStatus = String(btn.dataset.currentStatus || '').toLowerCase();
+    const isAttention = currentStatus === 'needs attention';
+
+    if (isAttention) {
+      const editUrl = document.getElementById('tutEditBtn')?.href;
+      if (editUrl) {
+        window.location.href = editUrl;
+      } else {
+        showToast('Edit link is unavailable for this record.', 'error');
+      }
+      return;
+    }
+
+    const originalLabel = label?.textContent || 'Mark Needs Attention';
+    btn.disabled = true;
+    if(label) label.textContent = 'Marking...';
+
+    try {
+      const res = await fetch(`/records/${encodeURIComponent(String(RECORD_ID))}/update`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: JSON.stringify({ status: 'Needs Attention' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if(!res.ok || !data.success) throw new Error(data.message || `HTTP ${res.status}`);
+
+      showToast('Record marked as Needs Attention.');
+      await loadChanges();
+    } catch(err) {
+      console.error(err);
+      btn.disabled = false;
+      if(label) label.textContent = originalLabel;
+      showToast('Unable to update this record. Please try again.', 'error');
+    }
+  });
+
   document.getElementById('applyBtn')?.addEventListener('click', applyFilters);
   document.getElementById('resetBtn')?.addEventListener('click', () => {
     const si = document.getElementById('searchInput');      if(si) si.value='';
@@ -1574,6 +1711,337 @@
   // ── Boot ──
   loadChanges();
   setInterval(loadChanges, 30000);
+})();
+</script>
+
+
+
+{{-- ══════════════════════════════════════════════════════
+     RECORD DETAIL TUTORIAL (Always loaded, auto-starts if needed)
+══════════════════════════════════════════════════════ --}}
+<style>
+  #kttmTut3Overlay {
+    position: fixed; inset: 0; z-index: 9000; pointer-events: all;
+  }
+  #kttmTut3Svg {
+    position: fixed; inset: 0; width: 100%; height: 100%;
+    z-index: 9001; pointer-events: none;
+  }
+  #kttmTut3Card {
+    position: fixed; z-index: 9002;
+    background: #fff; border-radius: 18px;
+    padding: 22px 24px 18px;
+    width: min(340px, calc(100vw - 32px));
+    box-shadow: 0 24px 64px rgba(0,0,0,.22), 0 0 0 1px rgba(0,0,0,.06);
+    transition: top .32s cubic-bezier(.4,0,.2,1),
+                left .32s cubic-bezier(.4,0,.2,1),
+                opacity .22s ease;
+  }
+  #kttmTut3Card.tut-hidden { opacity: 0; pointer-events: none; }
+  .tut3-step-label {
+    font-size: 0.62rem; font-weight: 800; letter-spacing: .1em;
+    text-transform: uppercase; color: #A52C30; margin-bottom: 6px;
+    font-family: 'DM Mono', monospace;
+  }
+  .tut3-title {
+    font-size: 1.02rem; font-weight: 800; color: #0F172A;
+    letter-spacing: -.2px; margin-bottom: 7px; line-height: 1.3;
+  }
+  .tut3-desc {
+    font-size: 0.78rem; color: #64748B; line-height: 1.65; font-weight: 500;
+  }
+  .tut3-footer {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    margin-top: 16px; gap: 10px;
+  }
+  .tut3-dots { display: flex; gap: 5px; align-items: center; }
+  .tut3-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #e2e8f0; transition: background .2s, width .2s;
+  }
+  .tut3-dot.active { background: #A52C30; width: 18px; border-radius: 3px; }
+  .tut3-actions { display: flex; gap: 8px; }
+  .tut3-btn-skip {
+    padding: 8px 14px; border-radius: 10px;
+    border: 1.5px solid #e2e8f0; background: none;
+    font-family: inherit; font-size: 0.75rem; font-weight: 700;
+    color: #94a3b8; cursor: pointer; transition: all .15s;
+  }
+  .tut3-btn-skip:hover { border-color: #A52C30; color: #A52C30; }
+  .tut3-btn-back {
+    padding: 8px 14px; border-radius: 10px;
+    border: 1.5px solid #e2e8f0; background: #fff;
+    font-family: inherit; font-size: 0.75rem; font-weight: 700;
+    color: #64748B; cursor: pointer; transition: all .15s;
+  }
+  .tut3-btn-back:hover:not(:disabled) { border-color: #A52C30; color: #A52C30; }
+  .tut3-btn-back:disabled { opacity: .45; cursor: not-allowed; }
+  .tut3-btn-next {
+    padding: 8px 20px; border-radius: 10px; border: none;
+    background: linear-gradient(135deg, #A52C30, #7E1F23);
+    font-family: inherit; font-size: 0.75rem; font-weight: 800;
+    color: #fff; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(165,44,48,.3);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .tut3-btn-next:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(165,44,48,.4); }
+  #kttmTut3Pulse {
+    position: fixed; z-index: 9003; border-radius: 14px;
+    border: 2.5px solid #F0C860; pointer-events: none;
+    animation: tut3Pulse 1.8s ease-out infinite;
+    transition: all .32s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes tut3Pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(240,200,96,.55); }
+    70%  { box-shadow: 0 0 0 10px rgba(240,200,96,0); }
+    100% { box-shadow: 0 0 0 0 rgba(240,200,96,0); }
+  }
+</style>
+
+<div id="kttmTut3Overlay" style="display:none;"></div>
+
+<svg id="kttmTut3Svg" xmlns="http://www.w3.org/2000/svg" style="display:none;">
+  <defs>
+    <mask id="kttmTut3Mask">
+      <rect width="100%" height="100%" fill="white"/>
+      <rect id="kttmTut3Hole" x="0" y="0" width="0" height="0" rx="14" fill="black"/>
+    </mask>
+  </defs>
+  <rect width="100%" height="100%" fill="rgba(10,14,26,0.72)" mask="url(#kttmTut3Mask)"/>
+</svg>
+
+<div id="kttmTut3Pulse" style="display:none;"></div>
+
+<div id="kttmTut3Card" class="tut-hidden">
+  <div class="tut3-step-label" id="kttmTut3Label">Step 1 of 5</div>
+  <div class="tut3-title"      id="kttmTut3Title"></div>
+  <div class="tut3-desc"       id="kttmTut3Desc"></div>
+  <div class="tut3-footer">
+    <div class="tut3-dots"    id="kttmTut3Dots"></div>
+    <div class="tut3-actions">
+      <button class="tut3-btn-skip" id="kttmTut3Skip">Skip tutorial</button>
+      <button class="tut3-btn-back" id="kttmTut3Back" disabled>Back</button>
+      <button class="tut3-btn-next" id="kttmTut3Next">Next</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Tutorial script always loaded, but only auto-starts if sessionStorage flag is set
+(function () {
+  const STEPS = [
+    {
+      target: 'tutHeroCard',
+      title:  'Record Overview',
+      desc:   'This is the Record Detail page. The header card shows a full snapshot of this IP record — its title, type, campus, and current status at a glance.',
+    },
+    {
+      target: 'tutHeroFields',
+      title:  'All Record Fields',
+      desc:   'This grid shows every detail of the record: Registration Number, Campus, College, Program, Registered Date, Next Due Date, Validity period, Class of Work, GDrive file link, and Remarks.',
+    },
+    {
+      target: 'tutFilterPanel',
+      title:  'Filter the Timeline',
+      desc:   'Use this panel to search and filter the change history. You can filter by action type (Created, Modified, Archived), sort by newest or oldest first, or search by keyword.',
+    },
+    {
+      target: 'tutTimeline',
+      title:  'Change Timeline',
+      desc:   'Every change ever made to this record is logged here in chronological order. Click any event to see the full field-by-field diff — what changed, who made it, and when.',
+    },
+    {
+      target: 'tutEditBtn',
+      title:  'Edit From Here vs. From Records',
+      desc:   'The Edit button here works differently from the Edit button inside the Records table. ' +
+              'Here, clicking Edit brings you back to the Records page and automatically opens the edit form ' +
+              'pre-filled with this exact record — no searching needed. ' +
+              'The Edit button in the Records table row works the same way but from within the page itself, ' +
+              'opening the edit modal inline without any navigation. ' +
+              'Let\'s go — click Next to open the edit form for this record now.',
+      action: 'navigateToEdit',
+    },
+  ];
+
+  let current = 0;
+  const TOTAL = STEPS.length;
+  const PAD   = 12;
+
+  const overlay = document.getElementById('kttmTut3Overlay');
+  const svgEl   = document.getElementById('kttmTut3Svg');
+  const hole    = document.getElementById('kttmTut3Hole');
+  const pulse   = document.getElementById('kttmTut3Pulse');
+  const card    = document.getElementById('kttmTut3Card');
+  const labelEl = document.getElementById('kttmTut3Label');
+  const titleEl = document.getElementById('kttmTut3Title');
+  const descEl  = document.getElementById('kttmTut3Desc');
+  const dotsEl  = document.getElementById('kttmTut3Dots');
+  const skipBtn = document.getElementById('kttmTut3Skip');
+  const backBtn = document.getElementById('kttmTut3Back');
+  const nextBtn = document.getElementById('kttmTut3Next');
+
+  function syncNavButtons() {
+    backBtn.disabled = current === 0;
+  }
+
+  function buildDots() {
+    dotsEl.innerHTML = STEPS.map((_, i) =>
+      `<div class="tut3-dot${i === current ? ' active' : ''}" id="tut3-dot-${i}"></div>`
+    ).join('');
+  }
+
+  function showStep(idx) {
+    const step = STEPS[idx];
+    const el   = document.getElementById(step.target);
+    if (!el) { goNext(); return; }
+
+    const r = el.getBoundingClientRect();
+    // Scroll into view if off-screen vertically
+    if (r.top < 0 || r.bottom > window.innerHeight) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => positionCard(el, idx), 380);
+    } else {
+      positionCard(el, idx);
+    }
+  }
+
+  function positionCard(el, idx) {
+    const r = el.getBoundingClientRect();
+    const x = Math.floor(r.left  - PAD);
+    const y = Math.floor(r.top   - PAD);
+    const w = Math.ceil(r.width  + PAD * 2);
+    const h = Math.ceil(r.height + PAD * 2);
+
+    hole.setAttribute('x',      x);
+    hole.setAttribute('y',      y);
+    hole.setAttribute('width',  w);
+    hole.setAttribute('height', h);
+
+    pulse.style.left   = x + 'px';
+    pulse.style.top    = y + 'px';
+    pulse.style.width  = w + 'px';
+    pulse.style.height = h + 'px';
+
+    labelEl.textContent = `Step ${idx + 1} of ${TOTAL}`;
+    titleEl.textContent = STEPS[idx].title;
+    descEl.textContent  = STEPS[idx].desc;
+    nextBtn.textContent = (idx === TOTAL - 1) ? 'Finish' : 'Next';
+    syncNavButtons();
+
+    document.querySelectorAll('.tut3-dot').forEach((d, i) => {
+      d.classList.toggle('active', i === idx);
+    });
+
+    // Force reflow so card height is accurate
+    card.classList.remove('tut-hidden');
+    void card.offsetHeight;
+
+    const cardW = Math.min(340, window.innerWidth - 32);
+    const cardH = card.offsetHeight || 210;
+    const vpW   = window.innerWidth;
+    const vpH   = window.innerHeight;
+    const gap   = 16;
+
+    let left = x;
+    let top  = y + h + gap;
+
+    if (left + cardW > vpW - gap) left = vpW - cardW - gap;
+    if (left < gap)               left = gap;
+    if (top  + cardH > vpH - gap) top  = y - cardH - gap;
+    if (top  < gap)               top  = gap;
+
+    card.style.left  = left + 'px';
+    card.style.top   = top  + 'px';
+    card.style.width = cardW + 'px';
+  }
+
+  function goNext() {
+    const step = STEPS[current];
+
+    // If this step triggers navigation, set flag and follow the edit link
+    if (step?.action === 'navigateToEdit') {
+      hideOverlay();
+      // Set flag to trigger the final Edit Record modal tutorial after redirect.
+      sessionStorage.setItem('kttm_tut_page', 'done_editnav');
+      sessionStorage.removeItem('kttm_tut_page_prev');
+      const editBtn = document.getElementById('tutEditBtn');
+      if (editBtn) {
+        window.location.href = editBtn.href;
+      }
+      return;
+    }
+
+    current++;
+    if (current >= TOTAL) {
+      hideOverlay();
+      dismiss();
+    } else {
+      showStep(current);
+    }
+  }
+
+  function goBack() {
+    if (current === 0) return;
+    current--;
+    showStep(current);
+  }
+
+  function hideOverlay() {
+    card.classList.add('tut-hidden');
+    overlay.style.display  = 'none';
+    svgEl.style.display    = 'none';
+    pulse.style.display    = 'none';
+  }
+
+  async function dismiss() {
+    hideOverlay();
+    // Modifiedrecords skip: stop the tutorial chain but do NOT permanently dismiss.
+    // The final dismiss (DB + session) is handled by the edit modal tutorial on Records.
+    sessionStorage.removeItem('kttm_tut_page');
+  }
+
+  skipBtn.addEventListener('click', dismiss);
+  backBtn.addEventListener('click', goBack);
+  nextBtn.addEventListener('click', goNext);
+
+  let resizeTimer;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      if (overlay.style.display === 'none' || overlay.style.display === '') return;
+      showStep(current);
+    }, 120);
+  });
+
+  // Guard/retry: Wait for all required elements before starting tutorial
+  function allTargetsReady() {
+    return STEPS.every(s => document.getElementById(s.target));
+  }
+
+  function boot() {
+    if (sessionStorage.getItem('kttm_tut_page') !== 'done_viewrecord') return;
+    // Wait for all targets to exist in DOM
+    let tries = 0;
+    function tryStart() {
+      if (allTargetsReady()) {
+        overlay.style.display = 'block';
+        svgEl.style.display   = 'block';
+        pulse.style.display   = 'block';
+        buildDots();
+        showStep(0);
+      } else if (++tries < 20) {
+        setTimeout(tryStart, 200);
+      }
+    }
+    tryStart();
+  }
+
+  if (document.readyState === 'complete') {
+    setTimeout(boot, 700);
+  } else {
+    window.addEventListener('load', () => setTimeout(boot, 700));
+  }
 })();
 </script>
 

@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>KTTM — How to File</title>
+  <link rel="icon" type="image/png" href="{{ asset('images/KTTMLOGOFAV-512.png') }}">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -50,11 +51,9 @@
     }
     .sidebar-logo {
       width: 42px; height: 42px; border-radius: 14px;
-      background: linear-gradient(135deg, var(--gold), var(--gold2));
       display: flex; align-items: center; justify-content: center;
-      font-weight: 800; font-size: 1rem; color: #2a1a0b;
       margin-bottom: 32px; flex-shrink: 0;
-      box-shadow: 0 6px 18px rgba(240,200,96,.35);
+      overflow: hidden;
     }
     .sidebar-nav {
       display: flex; flex-direction: column; align-items: center;
@@ -183,12 +182,22 @@
 
     /* ── CONTENT ── */
     .content {
-      padding: clamp(14px, 2.5vw, 18px) var(--pad-x);
-      flex: 1;
-      width: 100%; max-width: var(--shell-max); margin: 0 auto;
-      box-sizing: border-box;
-      background: var(--bg) url('{{ asset("images/abstractBGIMAGE12.png") }}') no-repeat right center;
-      background-size: cover;
+      padding: clamp(14px, 2.5vw, 24px) var(--pad-x);
+  flex: 1;
+  width: 100%;
+  max-width: var(--shell-max);
+  margin: 0 auto;
+  box-sizing: border-box;
+  background-color: #EEE9E9;
+  background-image: linear-gradient(rgba(165,44,48,.055) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(165,44,48,.055) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+    @media (max-width: 640px) {
+      .content {
+        background-position: center top;
+        background-size: auto 100%;
+      }
     }
 
     /* ── HERO CARD (dark maroon, like the chart card) ── */
@@ -686,7 +695,9 @@
   {{-- ── SIDEBAR ── --}}
   <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
   <aside class="sidebar" id="mainSidebar" aria-label="Guest navigation">
-    <div class="sidebar-logo">K</div>
+    <div class="sidebar-logo">
+      <img src="{{ asset('images/guest icon.png') }}" alt="Logo" style="width:100%;height:100%;object-fit:contain;">
+    </div>
 
     <nav class="sidebar-nav">
       <a href="{{ $urlGuestHome }}" class="nav-item">

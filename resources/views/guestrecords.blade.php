@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="csrf-token" content="{{ csrf_token() }}" />
   <title>KTTM — Records for Guest</title>
+  <link rel="icon" type="image/png" href="{{ asset('images/KTTMLOGOFAV-512.png') }}">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -32,7 +33,11 @@
 
     body {
       font-family: 'Plus Jakarta Sans', sans-serif;
-      background: var(--bg);
+      background-color: #EEE9E9;
+      background-image:
+        linear-gradient(rgba(165,44,48,.055) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(165,44,48,.055) 1px, transparent 1px);
+      background-size: 28px 28px;
       color: var(--ink);
       min-height: 100vh;
       overflow-x: hidden;
@@ -177,8 +182,12 @@
       max-width: var(--shell-max);
       margin: 0 auto;
       box-sizing: border-box;
-      background: var(--bg) url('{{ asset("images/abstractBGIMAGE12.png") }}') no-repeat right center;
-      background-size: cover;
+      background: transparent;
+    }
+    @media (max-width: 640px) {
+      .content {
+        background-size: auto 100%;
+      }
     }
 
     /* ── HERO DARK CARD ── */

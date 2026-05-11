@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="csrf-token" content="{{ csrf_token() }}" />
   <title>KTTM — Insights</title>
+  <link rel="icon" type="image/png" href="{{ asset('images/KTTMLOGOFAV-512.png') }}">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -211,14 +212,22 @@
 
     /* ══════════ CONTENT ══════════ */
     .content {
-      padding: clamp(14px, 2.5vw, 24px) var(--pad-x);
-      flex: 1;
-      width: 100%;
-      max-width: var(--shell-max);
-      margin: 0 auto;
-      box-sizing: border-box;
-      background: var(--bg) url('{{ asset("images/abstractBGIMAGE12.png") }}') no-repeat right center;
-      background-size: cover;
+  padding: clamp(14px, 2.5vw, 24px) var(--pad-x);
+  flex: 1;
+  width: 100%;
+  max-width: var(--shell-max);
+  margin: 0 auto;
+  box-sizing: border-box;
+  background-color: #EEE9E9;
+  background-image: linear-gradient(rgba(165,44,48,.055) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(165,44,48,.055) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+    @media (max-width: 640px) {
+      .content {
+        background-position: center top;
+        background-size: auto 100%;
+      }
     }
 
     /* ══════════ GLOBAL FILTER BAR ══════════ */
@@ -775,23 +784,29 @@
 
   $statusCounts = collect($allRecords)->map(fn($r)=>$norm($r['status']??null))->countBy()->sortDesc();
   $typeCounts   = collect($allRecords)->map(fn($r)=>$norm($r['category']??null))->countBy()->sortDesc();
-  $campusCounts = collect($allRecords)->map(fn($r)=>$norm($r['campus']??null))->countBy()->sortDesc();
+  $normCampus = fn($v) => (function($v) {
+      $v = is_string($v) ? trim($v) : $v;
+      if ($v === null || $v === '') return 'No Campus';
+      if (in_array(strtolower((string)$v), ['na', 'n/a', 'n / a', '-', '--', 'none', 'null', 'unknown'])) return 'No Campus';
+      return $v;
+  })($v);
+  $campusCounts = collect($allRecords)->map(fn($r)=>$normCampus($r['campus']??null))->countBy()->sortDesc();
 
   $distinctIpTypes  = IpRecord::distinct('category')->whereNotNull('category')->pluck('category')->filter(fn($v)=>trim($v)!='')->sort()->values();
   $distinctStatuses = IpRecord::distinct('status')->whereNotNull('status')->pluck('status')->filter(fn($v)=>trim($v)!='')->sort()->values();
-  $distinctCampuses = IpRecord::distinct('campus')->whereNotNull('campus')->pluck('campus')->filter(fn($v)=>trim($v)!='')->sort()->values();
+  $distinctCampuses = IpRecord::whereNotNull('campus')->pluck('campus')->map(fn($v)=>trim($v))->filter(fn($v)=>$v!==''&&$v!=='N/A')->unique()->sort()->values();
 
   $byMonthRegistered = collect($allRecords)->map(fn($r)=>isset($r['registered'])?\Carbon\Carbon::parse($r['registered'])->format('Y-m'):null)->filter()->countBy()->sortKeys();
   $byYearRegistered  = collect($allRecords)->map(fn($r)=>isset($r['registered'])?\Carbon\Carbon::parse($r['registered'])->format('Y'):null)->filter()->countBy()->sortKeys();
 
-  $campusLabels   = $campusCounts->keys()->filter(fn($k)=>$k!=='—')->values()->take(6);
+  $campusLabels   = $campusCounts->keys()->filter(fn($k)=>$k!=='No Campus')->values()->take(6);
   $categoryLabels = $typeCounts->keys()->filter(fn($k)=>$k!=='—')->values()->take(6);
 
   $catCampusMatrix = [];
   foreach($categoryLabels as $cat){
     $catCampusMatrix[$cat] = [];
     foreach($campusLabels as $camp){
-      $catCampusMatrix[$cat][$camp] = collect($allRecords)->filter(fn($r)=>$norm($r['category']??null)===$cat && $norm($r['campus']??null)===$camp)->count();
+      $catCampusMatrix[$cat][$camp] = collect($allRecords)->filter(fn($r)=>$norm($r['category']??null)===$cat && $normCampus($r['campus']??null)===$camp)->count();
     }
   }
 
@@ -893,7 +908,7 @@
     'allRecords'  => $allRecords,
     'filterStatuses'   => $statusCounts->keys()->filter(fn($k)=>$k!=='—')->values()->toArray(),
     'filterCategories' => $typeCounts->keys()->filter(fn($k)=>$k!=='—')->values()->toArray(),
-    'filterCampuses'   => $campusCounts->keys()->filter(fn($k)=>$k!=='—')->values()->toArray(),
+    'filterCampuses'   => $campusCounts->keys()->filter(fn($k)=>$k!=='No Campus')->values()->toArray(),
     'status'  => ['labels'=>$statusTop->keys()->values(),'values'=>$statusTop->values()],
     'types'   => ['labels'=>$typeTop->keys()->values(),'values'=>$typeTop->values()],
     'campus'  => ['labels'=>$campusTop->keys()->values(),'values'=>$campusTop->values()],
@@ -969,7 +984,7 @@
     </div>
   </div>
 
-  <nav class="sidebar-nav">
+  <nav class="sidebar-nav" id="tutorialSidebar">
     <a href="{{ $urlDashboard }}" class="nav-item">
       <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
@@ -1049,11 +1064,15 @@
         </svg>
         <span class="btn-howto-label">How to Use</span>
       </button>
+      <button type="button" id="openReportBtn" class="btn-outline" title="Generate Custom Report" style="background:var(--maroon);color:#fff;border-color:var(--maroon);">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 17H5a2 2 0 00-2 2v0a2 2 0 002 2h14a2 2 0 002-2v0a2 2 0 00-2-2h-4"/><rect x="9" y="3" width="6" height="14" rx="1"/></svg>
+        <span class="btn-records-label">Generate Report</span>
+      </button>
       <a href="{{ $urlRecords }}" class="btn-outline" title="Open Records">
         <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
         <span class="btn-records-label">Records</span>
       </a>
-      
+
     </div>
   </header>
 
@@ -1061,7 +1080,7 @@
   <div class="content">
 
     {{-- KPI STRIP --}}
-    <div class="kpi-strip fade-up">
+    <div class="kpi-strip fade-up" id="tutorialInsightsKpi">
       <div class="kpi-card accent">
         <div class="kpi-icon" style="background:rgba(255,255,255,.14);">
           <svg width="18" height="18" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -1144,7 +1163,7 @@
 
     {{-- TAB NAV --}}
     <nav class="tab-nav">
-      <button class="tab-btn active" data-tab="overview">
+      <button class="tab-btn active" data-tab="overview" id="tutorialTabOverview">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
         <span class="tab-label">Overview</span>
         <span class="tab-count">3</span>
@@ -1705,6 +1724,123 @@
 </div>
 
 {{-- ══ LOGOUT MODAL ══ --}}
+
+{{-- ═══════════════════════════════════════════
+     REPORT GENERATOR MODAL
+═══════════════════════════════════════════ --}}
+<div class="modal-overlay" id="reportModal" style="z-index:1100;display:none;">
+  <div class="modal-box" style="max-width:900px;width:96vw;padding:0;overflow:hidden;">
+
+    {{-- Header --}}
+    <div class="modal-head rpt-modal-head">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div class="rpt-head-icon">
+          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="rpt-eyebrow">Analytics</div>
+          <div class="rpt-title">Custom Report Generator</div>
+        </div>
+      </div>
+      <button type="button" class="modal-close" id="closeReportModal">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    {{-- Controls --}}
+    <div class="rpt-controls">
+
+      {{-- Year range --}}
+      <div class="rpt-ctrl-group">
+        <label class="rpt-ctrl-label">Year From</label>
+        <input type="number" id="rpt-year-from" class="rpt-ctrl-input" placeholder="2018" min="2000" max="2100">
+      </div>
+      <div class="rpt-ctrl-sep">—</div>
+      <div class="rpt-ctrl-group">
+        <label class="rpt-ctrl-label">Year To</label>
+        <input type="number" id="rpt-year-to" class="rpt-ctrl-input" placeholder="2025" min="2000" max="2100">
+      </div>
+
+      {{-- Divider --}}
+      <div class="rpt-ctrl-vdivider"></div>
+
+      {{-- IP Type --}}
+      <div class="rpt-ctrl-group">
+        <label class="rpt-ctrl-label">IP Type</label>
+        <select id="rpt-type" class="rpt-ctrl-select">
+          <option value="">All Types</option>
+          <option value="Patent">Patent</option>
+          <option value="Utility Model">Utility Model</option>
+          <option value="Industrial Design">Industrial Design</option>
+          <option value="Copyright">Copyright</option>
+          <option value="Trademark">Trademark</option>
+        </select>
+      </div>
+
+      {{-- Campus multi-select --}}
+      <div class="rpt-ctrl-group rpt-campus-wrap" id="rpt-campus-wrap" style="flex:1;min-width:200px;">
+        <label class="rpt-ctrl-label">Campuses <span class="rpt-ctrl-hint">(blank = all)</span></label>
+        <div id="rpt-campus-chips" class="rpt-chips-box">
+          <span id="rpt-campus-placeholder" class="rpt-chips-placeholder">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="opacity:.4;margin-right:4px;flex-shrink:0;"><path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            All campuses
+          </span>
+        </div>
+        <div id="rpt-campus-dropdown" class="rpt-campus-panel">
+          <div class="rpt-panel-head">
+            <div class="rpt-panel-search-wrap">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="opacity:.4;flex-shrink:0;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="rpt-campus-search" class="rpt-panel-search" placeholder="Search campus…">
+            </div>
+            <button type="button" id="rpt-campus-done" class="rpt-panel-done">✓ Done</button>
+          </div>
+          <label class="rpt-campus-cb rpt-select-all-row" id="rpt-select-all-label">
+            <input type="checkbox" id="rpt-select-all"> <span>Select all</span>
+          </label>
+          <div class="rpt-panel-divider"></div>
+          <div id="rpt-campus-options" class="rpt-panel-options"></div>
+        </div>
+      </div>
+
+      {{-- Generate button --}}
+      <button type="button" id="rpt-generate-btn" class="rpt-generate-btn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Generate
+      </button>
+    </div>
+
+    {{-- Table area --}}
+    <div class="rpt-table-area" id="rpt-table-wrap">
+      <div id="rpt-empty" class="rpt-empty-state">
+        <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="color:#cbd5e1;margin-bottom:12px;">
+          <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        </svg>
+        <div style="font-weight:700;font-size:0.9rem;color:#64748b;margin-bottom:4px;">No report yet</div>
+        <div style="font-size:0.78rem;color:#94a3b8;">Configure the options above and click <strong style="color:var(--maroon,#991b1b);">Generate</strong> to build your report.</div>
+      </div>
+      <table id="rpt-table" style="display:none;width:100%;border-collapse:collapse;font-size:0.78rem;">
+        <thead id="rpt-thead"></thead>
+        <tbody id="rpt-tbody"></tbody>
+        <tfoot id="rpt-tfoot"></tfoot>
+      </table>
+    </div>
+
+    {{-- Footer --}}
+    <div class="rpt-footer">
+      <div id="rpt-result-note" class="rpt-result-note" style="display:none;"></div>
+      <div style="display:flex;gap:8px;margin-left:auto;">
+        <button type="button" id="rpt-close-btn" class="rpt-btn-outline">Close</button>
+        <button type="button" id="rpt-export-btn" class="rpt-btn-export" style="display:none;">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export CSV
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="logoutModal">
   <div class="modal-box">
     <div style="padding:28px;">
@@ -1726,6 +1862,216 @@
   </div>
 </div>
 
+<script>
+</script>
+<style>
+  #reportModal { align-items: flex-start; padding: 32px 16px; overflow-y: auto; }
+
+  /* ── Modal shell ── */
+  #reportModal .modal-box {
+    border-radius: 18px; overflow: hidden;
+    max-width: 1000px; width: 100%;
+    box-shadow: 0 24px 64px rgba(0,0,0,.22);
+    display: flex; flex-direction: column; max-height: 90vh;
+  }
+
+  /* ── Header ── */
+  .rpt-modal-head {
+    background: linear-gradient(135deg, #6b0f10 0%, #991b1b 60%, #b91c1c 100%);
+    padding: 20px 68px 20px 24px !important; flex-shrink: 0;
+    position: relative;
+  }
+  #reportModal .modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.2);
+    color: rgba(255,255,255,.82);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+  }
+  #reportModal .modal-close:hover {
+    background: rgba(255,255,255,.22);
+    color: #fff;
+  }
+  .rpt-head-icon {
+    width: 42px; height: 42px; border-radius: 12px;
+    background: rgba(255,255,255,.15); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; flex-shrink: 0;
+  }
+  .rpt-eyebrow { font-size: 0.62rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.6); margin-bottom: 3px; }
+  .rpt-title   { font-size: 1.15rem; font-weight: 800; color: #fff; font-family: 'Plus Jakarta Sans', sans-serif; }
+
+  /* ── Controls bar ── */
+  .rpt-controls {
+    padding: 16px 24px; border-bottom: 1px solid var(--line,#e5e7eb);
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;
+    background: #f8fafc; flex-shrink: 0;
+  }
+  .rpt-ctrl-group { display: flex; flex-direction: column; gap: 5px; }
+  .rpt-ctrl-label { font-size: 0.6rem; font-weight: 800; letter-spacing: .08em; color: #94a3b8; text-transform: uppercase; }
+  .rpt-ctrl-hint  { font-weight: 400; text-transform: none; opacity: .7; }
+  .rpt-ctrl-input, .rpt-ctrl-select {
+    height: 36px; padding: 0 10px; font-size: 0.8rem;
+    border: 1.5px solid var(--line,#e5e7eb); border-radius: 8px;
+    background: #fff; color: var(--ink,#0f172a); outline: none;
+    transition: border-color .15s;
+  }
+  .rpt-ctrl-input  { width: 100px; }
+  .rpt-ctrl-select { min-width: 150px; }
+  .rpt-ctrl-input:focus, .rpt-ctrl-select:focus { border-color: var(--maroon,#991b1b); }
+  .rpt-ctrl-sep { font-size: 1rem; color: #cbd5e1; padding-bottom: 8px; }
+  .rpt-ctrl-vdivider { width: 1px; background: var(--line,#e5e7eb); height: 36px; align-self: flex-end; }
+
+  .rpt-generate-btn {
+    display: flex; align-items: center; gap: 7px;
+    height: 36px; padding: 0 20px;
+    background: var(--maroon,#991b1b); color: #fff;
+    border: none; border-radius: 8px; font-size: 0.82rem; font-weight: 700;
+    cursor: pointer; white-space: nowrap; align-self: flex-end;
+    transition: background .15s, transform .1s;
+    box-shadow: 0 2px 8px rgba(153,27,27,.3);
+  }
+  .rpt-generate-btn:hover { background: #7f1d1d; transform: translateY(-1px); }
+  .rpt-generate-btn:active { transform: translateY(0); }
+
+  /* ── Campus multi-select ── */
+  .rpt-campus-wrap { position: relative; }
+  .rpt-chips-box {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 5px;
+    min-height: 36px; border: 1.5px solid var(--line,#e5e7eb);
+    border-radius: 8px; padding: 4px 10px;
+    background: #fff; cursor: pointer; transition: border-color .15s;
+  }
+  .rpt-chips-box:hover { border-color: var(--maroon,#991b1b); }
+  .rpt-chips-placeholder {
+    display: flex; align-items: center;
+    font-size: 0.78rem; color: #94a3b8;
+    line-height: 26px; user-select: none;
+  }
+  .rpt-campus-panel {
+    position: absolute; top: calc(100% + 6px); left: 0;
+    z-index: 300; width: 280px;
+    background: #fff; border: 1.5px solid var(--line,#e5e7eb);
+    border-radius: 12px; box-shadow: 0 16px 40px rgba(0,0,0,.16);
+    display: none; flex-direction: column; overflow: hidden;
+  }
+  .rpt-campus-panel.open { display: flex; }
+  .rpt-panel-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px; border-bottom: 1px solid var(--line,#e5e7eb);
+    background: #f8fafc;
+  }
+  .rpt-panel-search-wrap {
+    display: flex; align-items: center; gap: 6px; flex: 1;
+    border: 1.5px solid var(--line,#e5e7eb); border-radius: 6px;
+    padding: 0 8px; background: #fff;
+  }
+  .rpt-panel-search {
+    flex: 1; font-size: 0.78rem; padding: 5px 0;
+    border: none; outline: none; color: var(--ink,#0f172a);
+    background: transparent;
+  }
+  .rpt-panel-done {
+    padding: 5px 12px; font-size: 0.73rem; font-weight: 700;
+    background: var(--maroon,#991b1b); color: #fff;
+    border: none; border-radius: 6px; cursor: pointer; white-space: nowrap;
+    transition: background .15s;
+  }
+  .rpt-panel-done:hover { background: #7f1d1d; }
+  .rpt-select-all-row {
+    padding: 8px 14px !important; background: #f8fafc;
+    font-weight: 700 !important; font-size: 0.78rem !important;
+  }
+  .rpt-panel-divider { height: 1px; background: var(--line,#e5e7eb); }
+  .rpt-panel-options { max-height: 220px; overflow-y: auto; padding: 4px 0; }
+  .rpt-panel-options::-webkit-scrollbar { width: 4px; }
+  .rpt-panel-options::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 99px; }
+  .rpt-campus-cb {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 14px; cursor: pointer; font-size: 0.79rem;
+    color: var(--ink,#0f172a); transition: background .1s;
+  }
+  .rpt-campus-cb:hover { background: #fef2f2; }
+  .rpt-campus-cb input[type=checkbox] { accent-color: var(--maroon,#991b1b); width: 14px; height: 14px; flex-shrink: 0; cursor: pointer; }
+  .rpt-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #fef2f2; color: var(--maroon,#991b1b);
+    border: 1px solid rgba(153,27,27,.2); border-radius: 20px;
+    padding: 2px 8px; font-size: 0.68rem; font-weight: 700;
+  }
+  .rpt-chip-x { cursor: pointer; font-size: 0.72rem; opacity: .6; line-height: 1; }
+  .rpt-chip-x:hover { opacity: 1; }
+
+  /* ── Table area ── */
+  .rpt-table-area { flex: 1; overflow: auto; padding: 20px 24px; }
+  .rpt-empty-state {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 48px 0; text-align: center;
+  }
+  #rpt-table th {
+    background: var(--maroon,#991b1b); color: #fff;
+    padding: 10px 14px; text-align: center; font-size: 0.67rem;
+    letter-spacing: .06em; text-transform: uppercase; white-space: nowrap;
+    position: sticky; top: 0; z-index: 2;
+  }
+  #rpt-table th:first-child { text-align: left; border-radius: 8px 0 0 0; }
+  #rpt-table th:last-child { border-radius: 0 8px 0 0; }
+  #rpt-table td {
+    padding: 9px 14px; border-bottom: 1px solid #f1f5f9;
+    text-align: center; font-size: 0.78rem;
+  }
+  #rpt-table td:first-child { text-align: left; font-weight: 600; color: var(--ink,#0f172a); }
+  #rpt-table tbody tr:hover td { background: #fef9f9; }
+  #rpt-table tfoot td {
+    font-weight: 800; color: var(--maroon,#991b1b);
+    border-top: 2px solid var(--maroon,#991b1b);
+    font-size: 0.8rem; padding: 10px 14px;
+    background: #fff9f9;
+  }
+  #rpt-table tfoot td:first-child { text-align: left; }
+
+  /* ── Footer ── */
+  .rpt-footer {
+    padding: 14px 24px; border-top: 1px solid var(--line,#e5e7eb);
+    display: flex; align-items: center; gap: 10px;
+    background: #f8fafc; flex-shrink: 0;
+  }
+  .rpt-result-note { font-size: 0.75rem; color: #64748b; }
+  .rpt-btn-outline {
+    padding: 7px 18px; background: transparent;
+    border: 1.5px solid var(--line,#e5e7eb); border-radius: 8px;
+    font-size: 0.8rem; cursor: pointer; color: #64748b;
+    transition: border-color .15s, color .15s;
+  }
+  .rpt-btn-outline:hover { border-color: #94a3b8; color: var(--ink,#0f172a); }
+  .rpt-btn-export {
+    display: flex; align-items: center; gap: 7px;
+    padding: 7px 18px; background: var(--maroon,#991b1b);
+    color: #fff; border: none; border-radius: 8px;
+    font-size: 0.8rem; font-weight: 700; cursor: pointer;
+    transition: background .15s;
+  }
+  .rpt-btn-export:hover { background: #7f1d1d; }
+  #rpt-table th { background:var(--maroon,#991b1b);color:#fff;padding:8px 12px;text-align:center;font-size:0.68rem;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap; }
+  #rpt-table th:first-child { text-align:left; }
+  #rpt-table td { padding:8px 12px;border-bottom:1px solid #f1f5f9;text-align:center;font-size:0.78rem; }
+  #rpt-table td:first-child { text-align:left;font-weight:600;color:#374151; }
+  #rpt-table tbody tr:hover td { background:#fafafa; }
+  #rpt-table tfoot td { font-weight:800;background:#f8f7f7;border-top:2px solid var(--maroon,#991b1b);color:var(--maroon,#991b1b); }
+  #rpt-table tfoot td:first-child { color:#374151; }
+  .rpt-campus-cb { display:flex;align-items:center;gap:8px;padding:5px 4px;font-size:0.78rem;cursor:pointer;border-radius:5px; }
+  .rpt-campus-cb:hover { background:#f8f7f7; }
+  .rpt-campus-cb input { accent-color:var(--maroon,#991b1b); }
+</style>
 <script>
 const KTTM_DATA = @json($js);
 
@@ -2089,7 +2435,7 @@ function rebuildAllCharts(){
 
   // ── Campus (both instances) ──
   const campusCounts={};
-  filtered.forEach(r=>{ const k=((r.campus)||'').toString().trim()||'—'; campusCounts[k]=(campusCounts[k]||0)+1; });
+  filtered.forEach(r=>{ const raw=((r.campus)||'').toString().trim(); const noCampus=['na','n/a','n / a','-','--','none','null','unknown']; const k=(raw===''||noCampus.includes(raw.toLowerCase()))?'No Campus':raw; campusCounts[k]=(campusCounts[k]||0)+1; });
   const campEntries=Object.entries(campusCounts).sort((a,b)=>b[1]-a[1]).slice(0,6);
   const cpLabels=campEntries.map(e=>e[0]), cpValues=campEntries.map(e=>e[1]);
   [charts.chartCampus, charts.chartCampusLg].forEach(c=>{ if(c){ c.data.labels=cpLabels; c.data.datasets[0].data=cpValues; c.data.datasets[0].backgroundColor=makeColors(cpLabels.length); c.update(); }});
@@ -2108,7 +2454,7 @@ function rebuildAllCharts(){
   const camps=cpLabels;
   const matrix={};
   cats.forEach(c=>{ matrix[c]={}; camps.forEach(p=>{ matrix[c][p]=0; }); });
-  filtered.forEach(r=>{ const c=((r.category||r.type)||'').trim()||'—'; const p=((r.campus)||'').trim()||'—'; if(cats.includes(c)&&camps.includes(p)) matrix[c][p]=(matrix[c][p]||0)+1; });
+  filtered.forEach(r=>{ const c=((r.category||r.type)||'').trim()||'—'; const rawP=((r.campus)||'').trim(); const noCampus=['na','n/a','n / a','-','--','none','null','unknown']; const p=(rawP===''||noCampus.includes(rawP.toLowerCase()))?'No Campus':rawP; if(cats.includes(c)&&camps.includes(p)) matrix[c][p]=(matrix[c][p]||0)+1; });
   if(charts.chartCatCampus){ charts.chartCatCampus.data.labels=cats; charts.chartCatCampus.data.datasets=camps.map((c,i)=>({label:c,data:cats.map(ct=>matrix[ct][c]||0),backgroundColor:makeColors(camps.length)[i],borderRadius:4,borderWidth:0})); charts.chartCatCampus.options.scales.y.type='logarithmic'; charts.chartCatCampus.options.scales.y.min=1; charts.chartCatCampus.update(); }
   // stacked version (campus on x, cats as datasets)
   if(charts.chartCatCampusStacked){ charts.chartCatCampusStacked.data.labels=camps; charts.chartCatCampusStacked.data.datasets=cats.map((cat,i)=>({label:cat,data:camps.map(c=>matrix[cat][c]||0),backgroundColor:makeColors(cats.length)[i],borderRadius:0,borderWidth:0})); charts.chartCatCampusStacked.update(); }
@@ -2304,6 +2650,560 @@ mainSidebar?.querySelectorAll('button.nav-item').forEach(btn => {
 window.addEventListener('resize', function() {
   if (window.innerWidth > 768) closeMobileSidebar();
 });
+</script>
+
+@if(isset($showTutorial) && $showTutorial)
+<style>
+  #kttmTut5Overlay { position:fixed;inset:0;z-index:9000;pointer-events:all; }
+  #kttmTut5Svg     { position:fixed;inset:0;width:100%;height:100%;z-index:9001;pointer-events:none; }
+  #kttmTut5Card {
+    position:fixed;z-index:9002;background:#fff;border-radius:18px;
+    padding:22px 24px 18px;width:min(360px,calc(100vw - 32px));
+    box-shadow:0 24px 64px rgba(0,0,0,.22),0 0 0 1px rgba(0,0,0,.06);
+    transition:top .32s cubic-bezier(.4,0,.2,1),left .32s cubic-bezier(.4,0,.2,1),opacity .22s ease;
+  }
+  #kttmTut5Card.tut-hidden { opacity:0;pointer-events:none; }
+  .tut5-label { font-size:.62rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#A52C30;margin-bottom:6px;font-family:'DM Mono',monospace; }
+  .tut5-title { font-size:1rem;font-weight:800;color:#0F172A;margin-bottom:6px;line-height:1.3; }
+  .tut5-desc  { font-size:.82rem;color:#64748B;line-height:1.6;margin-bottom:16px; }
+  .tut5-footer { display:flex;align-items:center;justify-content:space-between;gap:10px; }
+  .tut5-dots  { display:flex;gap:5px;align-items:center; }
+  .tut5-dot   { width:6px;height:6px;border-radius:50%;background:#e2e8f0;transition:background .2s,width .2s; }
+  .tut5-dot.active { background:#A52C30;width:18px;border-radius:3px; }
+  .tut5-actions { display:flex;gap:8px; }
+  .tut5-btn-skip {
+    padding:8px 14px;border-radius:10px;border:1.5px solid #e2e8f0;background:none;
+    font-family:inherit;font-size:.75rem;font-weight:700;color:#94a3b8;cursor:pointer;transition:all .15s;
+  }
+  .tut5-btn-skip:hover { border-color:#A52C30;color:#A52C30; }
+  .tut5-btn-back {
+    padding:8px 14px;border-radius:10px;border:1.5px solid #e2e8f0;background:#fff;
+    font-family:inherit;font-size:.75rem;font-weight:700;color:#64748B;cursor:pointer;transition:all .15s;
+  }
+  .tut5-btn-back:hover:not(:disabled) { border-color:#A52C30;color:#A52C30; }
+  .tut5-btn-back:disabled { opacity:.45;cursor:not-allowed; }
+  .tut5-btn-next {
+    padding:8px 20px;border-radius:10px;border:none;
+    background:linear-gradient(135deg,#A52C30,#7E1F23);
+    font-family:inherit;font-size:.75rem;font-weight:800;color:#fff;cursor:pointer;
+    box-shadow:0 4px 12px rgba(165,44,48,.3);transition:transform .15s,box-shadow .15s;
+  }
+  .tut5-btn-next:hover { transform:translateY(-1px);box-shadow:0 6px 16px rgba(165,44,48,.4); }
+  #kttmTut5Pulse {
+    position:fixed;z-index:9003;border-radius:14px;
+    border:2.5px solid #F0C860;pointer-events:none;
+    animation:tut5Pulse 1.8s ease-out infinite;
+    transition:all .32s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes tut5Pulse {
+    0%   { box-shadow:0 0 0 0 rgba(240,200,96,.55); }
+    70%  { box-shadow:0 0 0 10px rgba(240,200,96,0); }
+    100% { box-shadow:0 0 0 0 rgba(240,200,96,0); }
+  }
+</style>
+
+<div id="kttmTut5Overlay"></div>
+<svg id="kttmTut5Svg" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <mask id="kttmTut5Mask">
+      <rect width="100%" height="100%" fill="white"/>
+      <rect id="kttmTut5Hole" x="0" y="0" width="0" height="0" rx="14" fill="black"/>
+    </mask>
+  </defs>
+  <rect width="100%" height="100%" fill="rgba(10,14,26,0.72)" mask="url(#kttmTut5Mask)"/>
+</svg>
+<div id="kttmTut5Pulse"></div>
+<div id="kttmTut5Card" class="tut-hidden">
+  <div class="tut5-label" id="kttmTut5Label">Step 1 of 5</div>
+  <div class="tut5-title" id="kttmTut5Title"></div>
+  <div class="tut5-desc"  id="kttmTut5Desc"></div>
+  <div class="tut5-footer">
+    <div class="tut5-dots"  id="kttmTut5Dots"></div>
+    <div class="tut5-actions">
+      <button class="tut5-btn-skip" id="kttmTut5Skip">Skip tutorial</button>
+      <button class="tut5-btn-back" id="kttmTut5Back" disabled>Back</button>
+      <button class="tut5-btn-next" id="kttmTut5Next">Next</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const STEPS = [
+    {
+      target: 'tutorialSidebar',
+      title:  'Navigation Sidebar',
+      desc:   'You are on the Insights page. Use the sidebar anytime to navigate to other pages. The active page is always highlighted.',
+    },
+    {
+      target: 'tutorialInsightsKpi',
+      title:  'Summary Statistics',
+      desc:   'These cards show your top-level numbers: total records, number of campuses, the most common IP category, and the year with the most recent activity.',
+    },
+    {
+      target: 'stickyDock',
+      title:  'Global Filters',
+      desc:   'Use these filters to narrow down all charts simultaneously by category, status, campus, year, or month. Changing any filter instantly updates every chart on the page.',
+    },
+    {
+      target: 'tutorialTabOverview',
+      title:  'Chart Tabs',
+      desc:   'The charts are grouped into tabs: Overview, Trends Over Time, Distribution, and Contributors. Click each tab to explore different views of your IP data.',
+    },
+    {
+      target: 'tab-overview',
+      title:  'Overview Charts',
+      desc:   'The Overview tab shows a status breakdown and category distribution of all your IP records. This is the best starting point for understanding the overall state of your portfolio.',
+    },
+  ];
+
+  let current = 0;
+  const TOTAL  = STEPS.length;
+  const PAD    = 12;
+
+  const overlay = document.getElementById('kttmTut5Overlay');
+  const hole    = document.getElementById('kttmTut5Hole');
+  const pulse   = document.getElementById('kttmTut5Pulse');
+  const card    = document.getElementById('kttmTut5Card');
+  const labelEl = document.getElementById('kttmTut5Label');
+  const titleEl = document.getElementById('kttmTut5Title');
+  const descEl  = document.getElementById('kttmTut5Desc');
+  const dotsEl  = document.getElementById('kttmTut5Dots');
+  const skipBtn = document.getElementById('kttmTut5Skip');
+  const backBtn = document.getElementById('kttmTut5Back');
+  const nextBtn = document.getElementById('kttmTut5Next');
+
+  function syncNavButtons() {
+    backBtn.disabled = current === 0;
+  }
+
+  function buildDots() {
+    dotsEl.innerHTML = STEPS.map((_, i) =>
+      `<div class="tut5-dot${i === current ? ' active' : ''}" id="tut5-dot-${i}"></div>`
+    ).join('');
+  }
+
+  function showStep(idx) {
+    const step = STEPS[idx];
+    const el   = document.getElementById(step.target);
+    if (!el) { goNext(); return; }
+
+    const r = el.getBoundingClientRect();
+    if (r.top < 0 || r.bottom > window.innerHeight) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => positionCard(el, idx), 380);
+    } else {
+      positionCard(el, idx);
+    }
+  }
+
+  function positionCard(el, idx) {
+    const r = el.getBoundingClientRect();
+    const x = Math.floor(r.left  - PAD);
+    const y = Math.floor(r.top   - PAD);
+    const w = Math.ceil(r.width  + PAD * 2);
+    const h = Math.ceil(r.height + PAD * 2);
+
+    hole.setAttribute('x', x); hole.setAttribute('y', y);
+    hole.setAttribute('width', w); hole.setAttribute('height', h);
+    pulse.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px;`;
+
+    labelEl.textContent = `Step ${idx + 1} of ${TOTAL}`;
+    titleEl.textContent = STEPS[idx].title;
+    descEl.textContent  = STEPS[idx].desc;
+    nextBtn.textContent = (idx === TOTAL - 1) ? 'Finish' : 'Next';
+    syncNavButtons();
+    document.querySelectorAll('.tut5-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
+
+    const cardW = Math.min(360, window.innerWidth - 32);
+    const cardH = card.offsetHeight || 210;
+    const gap   = 16;
+    let left = x, top = y + h + gap;
+    if (left + cardW > window.innerWidth  - gap) left = window.innerWidth  - cardW - gap;
+    if (left < gap)                              left = gap;
+    if (top  + cardH > window.innerHeight - gap) top  = y - cardH - gap;
+    if (top  < gap)                              top  = gap;
+    card.style.cssText += `left:${left}px;top:${top}px;width:${cardW}px;`;
+    card.classList.remove('tut-hidden');
+  }
+
+  function goNext() {
+    current++;
+    if (current >= TOTAL) {
+      hideOverlay();
+      sessionStorage.setItem('kttm_tut_page', 'calendar');
+      window.location.href = '/calendar';
+    } else {
+      showStep(current);
+    }
+  }
+
+  function goBack() {
+    if (current === 0) return;
+    current--;
+    showStep(current);
+  }
+
+  function hideOverlay() {
+    card.classList.add('tut-hidden');
+    overlay.style.display = 'none';
+    document.getElementById('kttmTut5Svg').style.display = 'none';
+    pulse.style.display = 'none';
+  }
+
+  async function dismiss() {
+    hideOverlay();
+    sessionStorage.removeItem('kttm_tut_page');
+    try {
+      await fetch('/tutorial/dismiss', {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type':'application/json','Accept':'application/json',
+                   'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+      });
+    } catch(e) {}
+  }
+
+  skipBtn.addEventListener('click', dismiss);
+  backBtn.addEventListener('click', goBack);
+  nextBtn.addEventListener('click', goNext);
+
+  let rt;
+  window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => showStep(current), 120); });
+
+  function boot() {
+    if (sessionStorage.getItem('kttm_tut_page') !== 'insights') return;
+    buildDots();
+    showStep(0);
+  }
+
+  if (document.readyState === 'complete') setTimeout(boot, 600);
+  else window.addEventListener('load', () => setTimeout(boot, 600));
+})();
+</script>
+@endif
+
+{{-- ═══ CAMPUS DRILL-DOWN MODAL ═══ --}}
+<div id="campusDrillBackdrop" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(15,23,42,.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:20px;width:100%;max-width:860px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(15,23,42,.22);overflow:hidden;">
+
+    {{-- Header --}}
+    <div id="campusDrillHead" style="background:linear-gradient(135deg,#7E1F23,#C1363A);padding:18px 24px;display:flex;align-items:center;gap:14px;flex-shrink:0;">
+      <div style="width:38px;height:38px;border-radius:11px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:#F0C860;flex-shrink:0;">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      </div>
+      <div>
+        <div id="campusDrillTitle" style="font-size:1rem;font-weight:800;color:#fff;"></div>
+        <div id="campusDrillSub" style="font-size:0.68rem;color:rgba(255,255,255,.55);margin-top:2px;"></div>
+      </div>
+      <button id="campusDrillClose" style="margin-left:auto;width:32px;height:32px;border-radius:9px;background:rgba(255,255,255,.12);border:none;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    {{-- Table --}}
+    <div style="flex:1;overflow-y:auto;padding:0;">
+      <table style="width:100%;border-collapse:collapse;font-size:0.72rem;">
+        <thead style="position:sticky;top:0;background:linear-gradient(135deg,#7E1F23,#C1363A);">
+          <tr>
+            <th style="padding:9px 16px;text-align:left;color:#fff;font-weight:700;font-size:0.63rem;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;">Record ID</th>
+            <th style="padding:9px 16px;text-align:left;color:#fff;font-weight:700;font-size:0.63rem;letter-spacing:.05em;text-transform:uppercase;">Title</th>
+            <th style="padding:9px 16px;text-align:left;color:#fff;font-weight:700;font-size:0.63rem;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;">Type</th>
+            <th style="padding:9px 16px;text-align:left;color:#fff;font-weight:700;font-size:0.63rem;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;">Status</th>
+            <th style="padding:9px 16px;text-align:left;color:#fff;font-weight:700;font-size:0.63rem;letter-spacing:.05em;text-transform:uppercase;">Author</th>
+          </tr>
+        </thead>
+        <tbody id="campusDrillBody"></tbody>
+      </table>
+    </div>
+
+    {{-- Footer --}}
+    <div style="padding:12px 20px;border-top:1px solid rgba(15,23,42,.08);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <span id="campusDrillCount" style="font-size:0.72rem;color:#64748B;"></span>
+      <button id="campusDrillCloseBtn" style="font-size:0.75rem;font-weight:700;padding:7px 18px;border-radius:10px;border:1.5px solid rgba(15,23,42,.12);background:#fff;color:#64748B;cursor:pointer;font-family:inherit;">Close</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  const backdrop  = document.getElementById('campusDrillBackdrop');
+  const title     = document.getElementById('campusDrillTitle');
+  const sub       = document.getElementById('campusDrillSub');
+  const body      = document.getElementById('campusDrillBody');
+  const countEl   = document.getElementById('campusDrillCount');
+  const closebtns = [document.getElementById('campusDrillClose'), document.getElementById('campusDrillCloseBtn')];
+
+  closebtns.forEach(b => b?.addEventListener('click', closeDrill));
+  backdrop?.addEventListener('click', e => { if(e.target === backdrop) closeDrill(); });
+  document.addEventListener('keydown', e => { if(e.key === 'Escape') closeDrill(); });
+
+  function closeDrill(){ backdrop.style.display = 'none'; document.body.style.overflow = ''; }
+
+  function normCampusJS(v){
+    const s = (v||'').toString().trim();
+    const noCampus = ['na','n/a','n / a','-','--','none','null','unknown'];
+    if(s === '' || noCampus.includes(s.toLowerCase())) return 'No Campus';
+    return s;
+  }
+
+  function openDrill(campusLabel){
+    const allRecs = (typeof KTTM_DATA !== 'undefined' ? KTTM_DATA?.allRecords : null) || [];
+
+    let matched;
+    if(campusLabel === 'Others'){
+      // Get top 6 campus labels from current chart data (excluding Others)
+      const chartLabels = (typeof KTTM_DATA !== 'undefined' ? KTTM_DATA?.campus?.labels : null || []).filter(l => l !== 'Others');
+      matched = allRecs.filter(r => !chartLabels.includes(normCampusJS(r.campus)));
+    } else {
+      matched = allRecs.filter(r => normCampusJS(r.campus) === campusLabel);
+    }
+
+    title.textContent   = campusLabel === 'Others' ? 'Others (Remaining Campuses)' : `Campus: ${campusLabel}`;
+    sub.textContent     = `${matched.length} record${matched.length !== 1 ? 's' : ''} found`;
+    countEl.textContent = `Showing ${matched.length} record${matched.length !== 1 ? 's' : ''}`;
+
+    body.innerHTML = matched.length === 0
+      ? `<tr><td colspan="5" style="padding:32px;text-align:center;color:#94A3B8;font-size:0.78rem;">No records found for this campus.</td></tr>`
+      : matched.map((r, i) => `
+        <tr style="border-bottom:1px solid rgba(15,23,42,.06);${i%2===0?'':'background:#fafafa'}">
+          <td style="padding:9px 16px;font-family:monospace;font-size:0.68rem;color:#A52C30;font-weight:700;white-space:nowrap;">${esc(r.record_id||r.id||'—')}</td>
+          <td style="padding:9px 16px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(r.title||r.ip_title||'')}">${esc(r.title||r.ip_title||'—')}</td>
+          <td style="padding:9px 16px;white-space:nowrap;">
+            <span style="font-size:0.62rem;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(165,44,48,.1);color:#A52C30;">${esc(r.category||r.type||'—')}</span>
+          </td>
+          <td style="padding:9px 16px;white-space:nowrap;">
+            <span style="font-size:0.62rem;font-weight:700;padding:2px 8px;border-radius:20px;${statusStyle(r.status)}">${esc(r.status||'—')}</span>
+          </td>
+          <td style="padding:9px 16px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.owner||r.owner_inventor||'—')}</td>
+        </tr>`).join('');
+
+    backdrop.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function statusStyle(s){
+    s = (s||'').toLowerCase();
+    if(s === 'registered')      return 'background:rgba(16,185,129,.1);color:#065F46;';
+    if(s.includes('filed'))     return 'background:rgba(55,138,221,.1);color:#0C447C;';
+    if(s.includes('expir'))     return 'background:rgba(239,68,68,.1);color:#B91C1C;';
+    return 'background:rgba(15,23,42,.06);color:#334155;';
+  }
+
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  // Wire up both campus charts (overview + distribution tab)
+  function wireChart(chartKey){
+    const interval = setInterval(() => {
+      const chart = (typeof charts !== 'undefined') ? charts[chartKey] : null;
+      if(!chart) return;
+      clearInterval(interval);
+      chart.options.onClick = function(evt, elements){
+        if(!elements.length) return;
+        const idx   = elements[0].index;
+        const label = chart.data.labels[idx];
+        openDrill(label);
+      };
+      chart.options.onHover = function(evt, elements){
+        evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+      };
+      chart.update();
+    }, 200);
+  }
+
+  wireChart('chartCampus');
+  wireChart('chartCampusLg');
+})();
+</script>
+
+
+<script>
+/* ═══════════════ REPORT GENERATOR ═══════════════ */
+(function () {
+  /* refs */
+  const modal      = document.getElementById('reportModal');
+  const openBtn    = document.getElementById('openReportBtn');
+  const closeBtn   = document.getElementById('closeReportModal');
+  const closeFt    = document.getElementById('rpt-close-btn');
+  const genBtn     = document.getElementById('rpt-generate-btn');
+  const exportBtn  = document.getElementById('rpt-export-btn');
+  const table      = document.getElementById('rpt-table');
+  const thead      = document.getElementById('rpt-thead');
+  const tbody      = document.getElementById('rpt-tbody');
+  const tfoot      = document.getElementById('rpt-tfoot');
+  const emptyMsg   = document.getElementById('rpt-empty');
+  const chipsEl    = document.getElementById('rpt-campus-chips');
+  const placeholder= document.getElementById('rpt-campus-placeholder');
+  const dropdown   = document.getElementById('rpt-campus-dropdown');
+  const optionsEl  = document.getElementById('rpt-campus-options');
+  const typeSelect = document.getElementById('rpt-type');
+
+  if (!modal || !openBtn) { console.warn('Report modal elements not found'); return; }
+
+  let selectedCampuses = new Set();
+  let lastReport = null;
+  const cleanText = v => (v ?? '').toString().trim();
+  const ipType = r => cleanText(r.category || r.type);
+  const ipTypeKey = r => ipType(r).toLowerCase();
+
+  const reportTypes = [...new Set(
+    ((KTTM_DATA.filterCategories || []).length
+      ? KTTM_DATA.filterCategories
+      : (KTTM_DATA.allRecords || []).map(ipType)
+    )
+      .map(cleanText)
+      .filter(Boolean)
+  )].sort((a, b) => a.localeCompare(b));
+
+  if (typeSelect && reportTypes.length) {
+    typeSelect.innerHTML = '<option value="">All Types</option>' +
+      reportTypes.map(type => `<option value="${type.replace(/"/g,'&quot;')}">${type}</option>`).join('');
+  }
+
+  /* build campus list */
+  const allCampuses = [...new Set(
+    (KTTM_DATA.allRecords || [])
+      .map(r => (r.campus || '').trim())
+      .filter(c => c && c !== 'N/A' && c !== 'No Campus')
+  )].sort();
+
+  allCampuses.forEach(camp => {
+    const lbl = document.createElement('label');
+    lbl.className = 'rpt-campus-cb';
+    lbl.innerHTML = `<input type="checkbox" value="${camp.replace(/"/g,'&quot;')}"> ${camp}`;
+    lbl.querySelector('input').addEventListener('change', e => {
+      if (e.target.checked) selectedCampuses.add(camp);
+      else selectedCampuses.delete(camp);
+      renderChips();
+    });
+    optionsEl.appendChild(lbl);
+  });
+
+  /* chip toggle */
+  chipsEl.addEventListener('click', () => {
+    const vis = dropdown.style.display === 'block';
+    dropdown.style.display = vis ? 'none' : 'block';
+  });
+  document.addEventListener('click', e => {
+    if (!chipsEl.contains(e.target) && !dropdown.contains(e.target))
+      dropdown.style.display = 'none';
+  });
+
+  function renderChips() {
+    chipsEl.querySelectorAll('.rpt-chip').forEach(c => c.remove());
+    placeholder.style.display = selectedCampuses.size ? 'none' : '';
+    selectedCampuses.forEach(camp => {
+      const chip = document.createElement('span');
+      chip.className = 'rpt-chip';
+      chip.innerHTML = `${camp} <span class="rpt-chip-x">✕</span>`;
+      chip.querySelector('.rpt-chip-x').addEventListener('click', e => {
+        e.stopPropagation();
+        selectedCampuses.delete(camp);
+        optionsEl.querySelectorAll('input').forEach(i => { if (i.value === camp) i.checked = false; });
+        renderChips();
+      });
+      chipsEl.insertBefore(chip, placeholder);
+    });
+  }
+
+  /* open / close */
+  function rptOpen()  { modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+  function rptClose() { modal.style.display = 'none'; document.body.style.overflow = ''; }
+
+  openBtn.addEventListener('click', rptOpen);
+  closeBtn.addEventListener('click', rptClose);
+  closeFt.addEventListener('click', rptClose);
+  modal.addEventListener('click', e => { if (e.target === modal) rptClose(); });
+
+  /* metrics */
+  const METRICS = [
+    { label:'Total IPs',          test: r => true },
+    { label:'IPs Filed',          test: r => ['filed','recently filed'].includes((r.status||'').trim().toLowerCase()) },
+    { label:'IPs Registered',     test: r => (r.status||'').trim().toLowerCase() === 'registered' },
+    { label:'Patents',            test: r => ipTypeKey(r) === 'patent' },
+    { label:'Utility Models',     test: r => ipTypeKey(r) === 'utility model' },
+    { label:'Industrial Designs', test: r => ipTypeKey(r) === 'industrial design' },
+    { label:'Copyrights',         test: r => ipTypeKey(r) === 'copyright' },
+    { label:'Trademarks',         test: r => ipTypeKey(r) === 'trademark' },
+  ];
+
+  /* generate */
+  genBtn.addEventListener('click', () => {
+    const yearFrom   = parseInt(document.getElementById('rpt-year-from').value) || 0;
+    const yearTo     = parseInt(document.getElementById('rpt-year-to').value)   || 9999;
+    const typeFilter = (document.getElementById('rpt-type').value || '').trim().toLowerCase();
+    const cols       = selectedCampuses.size ? [...selectedCampuses].sort() : allCampuses;
+
+    if (!cols.length) {
+      emptyMsg.textContent = 'No campus data found.';
+      emptyMsg.style.display = '';
+      table.style.display = 'none';
+      exportBtn.style.display = 'none';
+      return;
+    }
+
+    /* filter records */
+    const records = (KTTM_DATA.allRecords || []).filter(r => {
+      if (typeFilter && ipTypeKey(r) !== typeFilter) return false;
+      if (yearFrom > 0 || yearTo < 9999) {
+        if (!r.registered) return false;
+        const y = new Date(r.registered).getFullYear();
+        if (yearFrom && y < yearFrom) return false;
+        if (yearTo < 9999 && y > yearTo) return false;
+      }
+      return true;
+    });
+
+    /* build data */
+    const tableData = METRICS.map(m => {
+      const counts = {}; let tot = 0;
+      cols.forEach(c => {
+        const n = records.filter(r => (r.campus||'').trim() === c && m.test(r)).length;
+        counts[c] = n; tot += n;
+      });
+      counts.__total__ = tot;
+      return { label: m.label, counts };
+    });
+    lastReport = { cols, tableData, yearFrom, yearTo, typeFilter };
+
+    /* render */
+    thead.innerHTML = `<tr><th style="text-align:left;min-width:160px;">Metric</th>${cols.map(c=>`<th>${c}</th>`).join('')}<th style="background:#5b0d0d;">TOTAL</th></tr>`;
+    tbody.innerHTML = tableData.map(row =>
+      `<tr><td>${row.label}</td>${cols.map(c=>`<td>${row.counts[c]||'<span style="color:#cbd5e1">—</span>'}</td>`).join('')}<td style="font-weight:700;color:var(--maroon,#991b1b);">${row.counts.__total__}</td></tr>`
+    ).join('');
+    const tot = tableData[0];
+    tfoot.innerHTML = `<tr><td>TOTAL</td>${cols.map(c=>`<td>${tot.counts[c]}</td>`).join('')}<td>${tot.counts.__total__}</td></tr>`;
+
+    table.style.display = '';
+    emptyMsg.style.display = 'none';
+    exportBtn.style.display = '';
+    const resultNote = document.getElementById('rpt-result-note');
+    if (resultNote) {
+      const totalRecords = tableData[0]?.counts.__total__ || 0;
+      const campusCols = cols.length;
+      resultNote.innerHTML = `<span style="color:#16a34a;font-weight:700;">${totalRecords.toLocaleString()}</span> records across <span style="font-weight:700;">${campusCols}</span> campus${campusCols !== 1 ? 'es' : ''}`;
+      resultNote.style.display = '';
+    }
+  });
+
+  /* export CSV */
+  exportBtn.addEventListener('click', () => {
+    if (!lastReport) return;
+    const { cols, tableData, yearFrom, yearTo, typeFilter } = lastReport;
+    const esc = v => `"${String(v).replace(/"/g,'""')}"`;
+    const yr  = (yearFrom && yearTo < 9999) ? `${yearFrom}-${yearTo}` : yearFrom ? `from_${yearFrom}` : yearTo < 9999 ? `to_${yearTo}` : 'All_Years';
+    let csv = esc(`KTTM IP Report — ${yr}${typeFilter ? ' — '+typeFilter : ''}`) + '\n\n';
+    csv += ['Metric',...cols,'TOTAL'].map(esc).join(',') + '\n';
+    tableData.forEach(r => { csv += [r.label,...cols.map(c=>r.counts[c]),r.counts.__total__].map(esc).join(',') + '\n'; });
+    const tot = tableData[0];
+    csv += ['TOTAL',...cols.map(c=>tot.counts[c]),tot.counts.__total__].map(esc).join(',') + '\n';
+    const a = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(new Blob([csv],{type:'text/csv'})),
+      download: `KTTM_Report_${yr}.csv`
+    });
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+})();
 </script>
 
 </body>

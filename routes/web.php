@@ -139,7 +139,7 @@ Route::post('/logout', function () {
     request()->session()->invalidate();
     request()->session()->regenerateToken();
     return redirect('/');
-});
+})->name('logout');
 
 /* ─────────────────────────────────────────────────────
    ACCOUNT LOGIN
@@ -148,8 +148,9 @@ Route::post('/logout', function () {
 ───────────────────────────────────────────────────── */
 Route::post('/login', function (Request $request) {
     $data = $request->validate([
-        'email'    => 'required|email',
-        'password' => 'required|string',
+        'email'       => 'required|email',
+        'password'    => 'required|string',
+        'remember_me' => 'boolean',
     ]);
 
     // Find account by email
@@ -192,17 +193,30 @@ Route::post('/login', function (Request $request) {
         $request->session()->put('user_avatar_color', $devUser->avatar_color);
         $request->session()->put('user_avatar_image', $devUser->avatar_image ?? null);
 
-        return response()->json([
+        $devResponse = response()->json([
             'success'  => true,
             'redirect' => '/dev',
         ]);
+        if (!empty($data['remember_me'])) {
+            $devResponse->cookie('kttm_remember_email', $data['email'], 60 * 24 * 30, '/', null, true, false);
+        } else {
+            $devResponse->cookie(\Cookie::forget('kttm_remember_email'));
+        }
+        return $devResponse;
     }
 
     // Non-developer account — go to profile select as normal
-    return response()->json([
+    $response = response()->json([
         'success'  => true,
         'redirect' => '/profile/select',
     ]);
+    // Handle remember me — store email in a 30-day cookie
+    if (!empty($data['remember_me'])) {
+        $response->cookie('kttm_remember_email', $data['email'], 60 * 24 * 30, '/', null, true, false);
+    } else {
+        $response->cookie(\Cookie::forget('kttm_remember_email'));
+    }
+    return $response;
 });
 
 /* ─────────────────────────────────────────────────────
@@ -334,8 +348,9 @@ Route::post('/profile/login', function (Request $request) {
     }
 
     $data = $request->validate([
-        'profile_id' => 'required|integer',
-        'password'   => 'required|string',
+        'profile_id'  => 'required|integer',
+        'password'    => 'required|string',
+        'remember_me' => 'boolean',
     ]);
 
     $accountId = $request->session()->get('account_id');
@@ -371,6 +386,7 @@ Route::post('/profile/login', function (Request $request) {
     $request->session()->put('user_avatar_color', $user->avatar_color);
     $request->session()->put('user_avatar_image', $user->avatar_image ?? null);
     $request->session()->put('session_started_at', now()->format('M d, Y · h:i A'));
+    $request->session()->put('show_tutorial',     (bool) ($user->show_tutorial ?? false));
     // Redirect based on base role
     $redirect = match($user->base_role ?? $user->role) {
         'admin'     => '/home',
@@ -452,10 +468,16 @@ Route::post('/dev/login', function (Request $request) {
         $request->session()->put('user_avatar_color',  $user->avatar_color);
         $request->session()->put('user_avatar_image',  $user->avatar_image ?? null);
 
-        return response()->json([
+        $devResponse = response()->json([
             'success'  => true,
             'redirect' => '/dev',
         ]);
+        if (!empty($data['remember_me'])) {
+            $devResponse->cookie('kttm_remember_email', $data['email'], 60 * 24 * 30, '/', null, true, false);
+        } else {
+            $devResponse->cookie(\Cookie::forget('kttm_remember_email'));
+        }
+        return $devResponse;
 
     } catch (\Exception $e) {
         \Log::error('Dev login error: ' . $e->getMessage());
@@ -474,7 +496,8 @@ Route::get('/profile', function (Request $request) {
     if (!$request->session()->has('user_id')) {
         return redirect('/')->with('login_error', 'Please sign in first.');
     }
-    return view('profile');
+    $showTutorial = (bool) session('show_tutorial', false);
+    return view('profile', compact('showTutorial'));
 })->name('profile');
 
 /* ─────────────────────────────────────────────────────
@@ -770,7 +793,7 @@ Route::get('/dev', function (\Illuminate\Http\Request $request) use ($devGuard) 
 
     // ── System health: all users with last login ───
     $users = DB::table('users')
-        ->select('id', 'name', 'role', 'is_active', 'avatar_color', 'avatar_image', 'last_login_at', 'updated_at')
+        ->select('id', 'name', 'role', 'is_active', 'avatar_color', 'avatar_image', 'last_login_at', 'updated_at', 'show_tutorial')
         ->orderByRaw("CASE role WHEN 'admin' THEN 0 ELSE 1 END")
         ->get();
 
@@ -890,11 +913,11 @@ Route::get('/dev/records', function (\Illuminate\Http\Request $request) use ($de
             'remarks'             => $r->remarks,
         ])->toArray();
 
-    $campuses = collect($allRecords)->pluck('campus')->filter()->unique()->sort()->values()->all();
-    $types    = collect($allRecords)->pluck('type')->filter()->unique()->sort()->values()->all();
-    $statuses = collect($allRecords)->pluck('status')->filter()->unique()->sort()->values()->all();
-    $colleges = IpRecord::select('college')->whereNotNull('college')->distinct()->pluck('college')->filter()->sort()->values()->all();
-    $programs = IpRecord::select('program')->whereNotNull('program')->distinct()->pluck('program')->filter()->sort()->values()->all();
+    $campuses = collect($allRecords)->pluck('campus')->map(fn($c) => trim((string) $c))->filter(fn($c) => $c !== '' && strtoupper($c) !== 'N/A')->unique()->sort()->values()->all();
+    $types    = collect($allRecords)->pluck('type')->map(fn($t) => trim((string) $t))->filter()->unique()->sort()->values()->all();
+    $statuses = collect($allRecords)->pluck('status')->map(fn($s) => trim((string) $s))->filter()->unique()->sort()->values()->all();
+    $colleges = IpRecord::select('college')->whereNotNull('college')->pluck('college')->map(fn($c) => trim((string) $c))->filter(fn($c) => $c !== '' && $c !== '-' && $c !== '—' && strtoupper($c) !== 'N/A')->unique()->sort()->values()->all();
+    $programs = IpRecord::select('program')->whereNotNull('program')->pluck('program')->map(fn($p) => trim((string) $p))->filter(fn($p) => $p !== '' && $p !== '-' && $p !== '—' && strtoupper($p) !== 'N/A')->unique()->sort()->values()->all();
 
     $recent = IpRecord::orderByDesc('date_registered_deposited')
         ->limit(10)
@@ -981,6 +1004,34 @@ Route::patch('/dev/users/{id}/toggle-active', function (\Illuminate\Http\Request
 });
 
 /* ─────────────────────────────────────────────────────
+   DEV API: TOGGLE TUTORIAL
+   Dev can turn the tutorial ON (reset) or OFF for any user.
+───────────────────────────────────────────────────── */
+Route::patch('/dev/users/{id}/toggle-tutorial', function (\Illuminate\Http\Request $request, $id) use ($devGuard) {
+    if ($request->session()->get('user_role') !== 'developer') {
+        return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
+    }
+    $target = DB::table('users')->where('id', $id)->first();
+    if (!$target) {
+        return response()->json(['success' => false, 'message' => 'User not found.'], 404);
+    }
+    if ($target->role === 'developer') {
+        return response()->json(['success' => false, 'message' => 'Cannot modify a developer account.'], 403);
+    }
+    // Always sets to the requested value (true = on/reset, false = off)
+    $newValue = (bool) $request->input('show_tutorial', true);
+    DB::table('users')->where('id', $id)->update([
+        'show_tutorial' => $newValue,
+        'updated_at'    => now(),
+    ]);
+    return response()->json([
+        'success'       => true,
+        'show_tutorial' => $newValue,
+        'message'       => 'Tutorial ' . ($newValue ? 'enabled' : 'disabled') . ' for this user.',
+    ]);
+});
+
+/* ─────────────────────────────────────────────────────
    DEV API: USER LOGIN HISTORY
 ───────────────────────────────────────────────────── */
 Route::get('/dev/users/{id}/login-history', function (\Illuminate\Http\Request $request, $id) use ($devGuard) {
@@ -1009,6 +1060,35 @@ Route::get('/dev/users/{id}/login-history', function (\Illuminate\Http\Request $
             'user_name'     => $user->name ?? '—',
             'last_login_at' => $user->last_login_at ?? null,
             'logs'          => $logs,
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+    }
+});
+
+/* ─────────────────────────────────────────────────────
+   DEV API: ONLINE USERS
+   Returns IDs of users currently active within the last
+   5 minutes, based on the active_sessions table.
+   Developers are never tracked so they never appear here.
+───────────────────────────────────────────────────── */
+Route::get('/dev/users/online', function (\Illuminate\Http\Request $request) use ($devGuard) {
+    if ($request->session()->get('user_role') !== 'developer') {
+        return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
+    }
+
+    try {
+        $onlineUserIds = DB::table('active_sessions')
+            ->whereNotNull('user_id')
+            ->where('role', 'admin')
+            ->where('last_seen_at', '>=', now()->subMinutes(5))
+            ->pluck('user_id')
+            ->unique()
+            ->values();
+
+        return response()->json([
+            'success'    => true,
+            'online_ids' => $onlineUserIds,
         ]);
     } catch (\Exception $e) {
         return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
@@ -1469,7 +1549,8 @@ Route::get('/calendar', function () {
         ])
         ->toArray();
 
-    return view('calendar', compact('user', 'allRecords', 'allTasks'));
+    $showTutorial = (bool) session('show_tutorial', false);
+    return view('calendar', compact('user', 'allRecords', 'allTasks', 'showTutorial'));
 })->name('calendar');
 
 /* ─────────────────────────────────────────────────────
@@ -1698,8 +1779,8 @@ Route::get('/home', function (
 
     $kpis = [
         'my_open'         => IpRecord::where('status', '!=', 'Registered')->count(),
-        'needs_attention' => IpRecord::where('status', 'Close to Expiration')->count(),
-        'due_soon'        => IpRecord::where('status', 'Close to Expiration')->count(),
+            'needs_attention' => IpRecord::where('status', 'Needs Attention')->count(),
+        'due_soon'        => IpRecord::whereIn('status', ['Close to Expiry', 'Close to Expiration'])->count(),
         'total_records'   => IpRecord::count(),
     ];
 
@@ -1753,13 +1834,13 @@ Route::get('/home', function (
         'remarks'             => $r->remarks,
     ];
 
-    $unregisteredRecords  = IpRecord::where('status', 'Unregistered')
+        $needsAttentionRecords = IpRecord::where('status', 'Needs Attention')
+            ->orderByDesc('date_registered_deposited')->get()->map($statusFields)->toArray();
+
+    $closeToExpiryRecords = IpRecord::whereIn('status', ['Close to Expiry', 'Close to Expiration'])
         ->orderByDesc('date_registered_deposited')->get()->map($statusFields)->toArray();
 
-    $underReviewRecords   = IpRecord::where('status', 'Under Review')
-        ->orderByDesc('date_registered_deposited')->get()->map($statusFields)->toArray();
-
-    $recentlyFiledRecords = IpRecord::where('status', 'Recently Filed')
+    $recentlyFiledRecords = IpRecord::whereIn('status', ['Filed', 'Recently Filed'])
         ->orderByDesc('date_registered_deposited')->get()->map($statusFields)->toArray();
 
     // ── Fetch today's tasks from calendar_tasks for the notification bell ──
@@ -1797,11 +1878,13 @@ Route::get('/home', function (
         'avatar_color' => session('user_avatar_color', '#A52C30'),
     ];
 
+    $showTutorial = (bool) session('show_tutorial', false);
+
     return view('home', compact(
         'user', 'kpis', 'recent', 'allRecords',
         'calMonth', 'calYear', 'todayTasks',
-        'unregisteredRecords', 'underReviewRecords', 'recentlyFiledRecords',
-        'scheduledAt'
+            'needsAttentionRecords', 'closeToExpiryRecords', 'recentlyFiledRecords',
+        'scheduledAt', 'showTutorial'
     ));
 })->name('home');
 
@@ -1817,6 +1900,24 @@ Route::get('/home/calendar', function (\Illuminate\Http\Request $request) {
         $calYear = $now->year;
     }
     return view('partials.home_calendar', compact('calMonth','calYear'));
+});
+
+/* ─────────────────────────────────────────────────────
+   TUTORIAL DISMISS
+   Called by the tutorial engine on finish or skip.
+   Sets show_tutorial = false in DB and session.
+───────────────────────────────────────────────────── */
+Route::post('/tutorial/dismiss', function (\Illuminate\Http\Request $request) {
+    if (!$request->session()->has('user_id')) {
+        return response()->json(['success' => false, 'message' => 'Session expired.'], 401);
+    }
+    $userId = $request->session()->get('user_id');
+    DB::table('users')->where('id', $userId)->update([
+        'show_tutorial' => false,
+        'updated_at'    => now(),
+    ]);
+    $request->session()->put('show_tutorial', false);
+    return response()->json(['success' => true]);
 });
 
 /**
@@ -1847,11 +1948,11 @@ Route::get('/ip-records', function () {
         })
         ->toArray();
 
-    $campuses = collect($allRecords)->pluck('campus')->filter()->unique()->sort()->values()->all();
-    $types    = collect($allRecords)->pluck('type')->filter()->unique()->sort()->values()->all();
-    $statuses = collect($allRecords)->pluck('status')->filter()->unique()->sort()->values()->all();
-    $colleges = IpRecord::select('college')->whereNotNull('college')->distinct()->pluck('college')->filter()->sort()->values()->all();
-    $programs = IpRecord::select('program')->whereNotNull('program')->distinct()->pluck('program')->filter()->sort()->values()->all();
+    $campuses = collect($allRecords)->pluck('campus')->map(fn($c) => trim((string) $c))->filter(fn($c) => $c !== '' && strtoupper($c) !== 'N/A')->unique()->sort()->values()->all();
+    $types    = collect($allRecords)->pluck('type')->map(fn($t) => trim((string) $t))->filter()->unique()->sort()->values()->all();
+    $statuses = collect($allRecords)->pluck('status')->map(fn($s) => trim((string) $s))->filter()->unique()->sort()->values()->all();
+    $colleges = IpRecord::select('college')->whereNotNull('college')->pluck('college')->map(fn($c) => trim((string) $c))->filter(fn($c) => $c !== '' && $c !== '-' && $c !== '—' && strtoupper($c) !== 'N/A')->unique()->sort()->values()->all();
+    $programs = IpRecord::select('program')->whereNotNull('program')->pluck('program')->map(fn($p) => trim((string) $p))->filter(fn($p) => $p !== '' && $p !== '-' && $p !== '—' && strtoupper($p) !== 'N/A')->unique()->sort()->values()->all();
 
     // if the visitor is authenticated we show the full records page
     if (\Illuminate\Support\Facades\Auth::check()) {
@@ -1860,7 +1961,8 @@ Route::get('/ip-records', function () {
             'role'         => session('user_role', 'staff'),
         'avatar_color' => session('user_avatar_color', '#A52C30'),
         ];
-        return view('records', compact('user', 'allRecords', 'campuses', 'types', 'statuses', 'colleges', 'programs'));
+        $showTutorial = (bool) session('show_tutorial', false);
+        return view('records', compact('user', 'allRecords', 'campuses', 'types', 'statuses', 'colleges', 'programs', 'showTutorial'));
     }
 
     // guest experience: render guest-specific view
@@ -1897,14 +1999,14 @@ Route::get('/records', function () {
         ->toArray();
 
     // derive complete filter lists from the DB
-    $campuses = IpRecord::select('campus')->whereNotNull('campus')->distinct()->pluck('campus')->filter()->sort()->values()->all();
+    $campuses = IpRecord::select('campus')->whereNotNull('campus')->pluck('campus')->map(fn($c) => trim((string) $c))->filter(fn($c) => $c !== '' && strtoupper($c) !== 'N/A')->unique()->sort()->values()->all();
     $types    = collect(
                     IpRecord::select('category')->whereNotNull('category')->distinct()->pluck('category')->all()
                 )->merge(['Copyright', 'Industrial Design', 'Patent', 'Trademark', 'Utility Model'])
                  ->unique()->sort()->values()->all();
-    $statuses = IpRecord::select('status')->whereNotNull('status')->distinct()->pluck('status')->filter()->sort()->values()->all();
-    $colleges = IpRecord::select('college')->whereNotNull('college')->distinct()->pluck('college')->filter()->sort()->values()->all();
-    $programs = IpRecord::select('program')->whereNotNull('program')->distinct()->pluck('program')->filter()->sort()->values()->all();
+    $statuses = IpRecord::select('status')->whereNotNull('status')->pluck('status')->map(fn($s) => trim((string) $s))->filter()->unique()->sort()->values()->all();
+    $colleges = IpRecord::select('college')->whereNotNull('college')->pluck('college')->map(fn($c) => trim((string) $c))->filter(fn($c) => $c !== '' && $c !== '-' && $c !== '—' && strtoupper($c) !== 'N/A')->unique()->sort()->values()->all();
+    $programs = IpRecord::select('program')->whereNotNull('program')->pluck('program')->map(fn($p) => trim((string) $p))->filter(fn($p) => $p !== '' && $p !== '-' && $p !== '—' && strtoupper($p) !== 'N/A')->unique()->sort()->values()->all();
 
     $user = (object)[
         'name'         => session('user_name', 'KTTM User'),
@@ -1912,30 +2014,67 @@ Route::get('/records', function () {
         'avatar_color' => session('user_avatar_color', '#A52C30'),
     ];
 
-    return view('records', compact('user', 'allRecords', 'campuses', 'types', 'statuses', 'colleges', 'programs'));
+    $showTutorial = (bool) session('show_tutorial', false);
+    return view('records', compact('user', 'allRecords', 'campuses', 'types', 'statuses', 'colleges', 'programs', 'showTutorial'));
 })->name('records.staff');
 
 // export records as CSV (optional date filter)
 Route::get('/records/export', function (Request $request) {
     $query = App\Models\IpRecord::orderByDesc('date_registered_deposited');
-    $hasDateFilter = false;
-    $start = null;
-    $end = null;
 
-    if ($request->filled('start') && $request->filled('end')) {
-        $start = $request->input('start');
-        $end   = $request->input('end');
-        $hasDateFilter = true;
-        try {
-            $query->whereDate('date_registered_deposited', '>=', $start)
-                  ->whereDate('date_registered_deposited', '<=', $end);
-        } catch (\Exception $e) {
-            $hasDateFilter = false;
+    $q       = $request->filled('q')       ? trim($request->input('q'))       : null;
+    $campus  = $request->filled('campus')  ? trim($request->input('campus'))  : null;
+    $status  = $request->filled('status')  ? trim($request->input('status'))  : null;
+    $type    = $request->filled('type')    ? trim($request->input('type'))    : null;
+    $college = $request->filled('college') ? trim($request->input('college')) : null;
+    $program = $request->filled('program') ? trim($request->input('program')) : null;
+    $start   = $request->filled('start')   ? $request->input('start')         : null;
+    $end     = $request->filled('end')     ? $request->input('end')           : null;
+
+    if ($q) {
+        $ql = strtolower($q);
+        $query->where(function ($sub) use ($ql) {
+            $sub->whereRaw('LOWER(ip_title) LIKE ?',            ["%{$ql}%"])
+                ->orWhereRaw('LOWER(owner_inventor) LIKE ?',    ["%{$ql}%"])
+                ->orWhereRaw('LOWER(record_id) LIKE ?',         ["%{$ql}%"])
+                ->orWhereRaw('LOWER(registration_number) LIKE ?',["%{$ql}%"]);
+        });
+    }
+    if ($campus) {
+        if ($campus === '__none__') {
+            $query->where(function($q2) {
+                $q2->whereNull('campus')
+                   ->orWhere('campus', '')
+                   ->orWhere('campus', 'N/A');
+            });
+        } else {
+            $query->where('campus', $campus);
         }
     }
+    if ($status === 'Filed') $query->whereIn('status', ['Filed', 'Recently Filed']);
+    elseif ($status) $query->where('status', $status);
+    if ($type)    $query->where('category', $type);
+    if ($college) $query->where('college', $college);
+    if ($program) $query->where('program', $program);
+    if ($start)   { try { $query->whereDate('date_registered_deposited', '>=', $start); } catch (\Exception $e) { $start = null; } }
+    if ($end)     { try { $query->whereDate('date_registered_deposited', '<=', $end);   } catch (\Exception $e) { $end   = null; } }
+
     $records = $query->get();
 
-    $columns = ['Record ID','IP Title','Category','Owner','Campus','Status','Date Registered','IPOPHL ID','GDrive Link','Remarks'];
+    // Build a descriptive filename from applied filters
+    $parts = ['KTTM_Records'];
+    if ($q)       $parts[] = 'search_' . preg_replace('/[^a-zA-Z0-9]/', '_', $q);
+    if ($campus)  $parts[] = str_replace(' ', '_', $campus);
+    if ($college) $parts[] = str_replace(' ', '_', $college);
+    if ($program) $parts[] = str_replace(' ', '_', $program);
+    if ($type)    $parts[] = str_replace(' ', '_', $type);
+    if ($status)  $parts[] = str_replace(' ', '_', $status);
+    if ($start && $end) $parts[] = $start . '_to_' . $end;
+    elseif ($start)     $parts[] = 'from_' . $start;
+    elseif ($end)       $parts[] = 'until_' . $end;
+    $filename = implode('_', $parts) . '.csv';
+
+    $columns = ['Record ID','IP Title','Category','Owner / Inventor','Campus','College','Program','Status','Date Created','Date Registered','Registration Number','GDrive Link','Remarks'];
     $callback = function () use ($records, $columns) {
         $out = fopen('php://output', 'w');
         fputcsv($out, $columns);
@@ -1946,7 +2085,10 @@ Route::get('/records/export', function (Request $request) {
                 $r->category,
                 $r->owner_inventor,
                 $r->campus,
+                $r->college,
+                $r->program,
                 $r->status,
+                $r->date_creation,
                 $r->date_registered_deposited,
                 $r->registration_number,
                 $r->gdrive_link,
@@ -1956,17 +2098,45 @@ Route::get('/records/export', function (Request $request) {
         fclose($out);
     };
 
-    if ($hasDateFilter && $start && $end) {
-        $filename = 'KTTM_Records_' . $start . '_to_' . $end . '.csv';
-    } else {
-        $filename = 'KTTM_Full_Records.csv';
-    }
-
     return response()->stream($callback, 200, [
-        'Content-Type' => 'text/csv',
+        'Content-Type'        => 'text/csv',
         'Content-Disposition' => "attachment; filename=\"{$filename}\"",
     ]);
 })->name('records.export');
+
+// API: look up known genders for a list of contributor names
+Route::post('/api/contributor-genders', function (Request $request) {
+    $names = $request->input('names', []);
+    if (!is_array($names) || empty($names)) {
+        return response()->json(['genders' => new stdClass()]);
+    }
+    // Fetch all contributors that match any of the supplied names (case-insensitive)
+    $normalised = array_values(array_unique(array_filter(array_map('trim', $names))));
+    if (empty($normalised)) {
+        return response()->json(['genders' => new stdClass()]);
+    }
+    $lower = array_map('strtolower', $normalised);
+    $rows = DB::table('ip_contributors')
+        ->whereNotNull('gender')
+        ->where('gender', '!=', '')
+        ->whereRaw('LOWER(TRIM(contributor_name)) IN (' . implode(',', array_fill(0, count($lower), '?')) . ')', $lower)
+        ->select('contributor_name', 'gender')
+        ->get();
+    // Build map: normalised-lowercase-name -> gender (last entry wins)
+    $map = [];
+    foreach ($rows as $row) {
+        $map[strtolower(trim($row->contributor_name))] = ucfirst(strtolower($row->gender));
+    }
+    // Return results keyed by the original supplied names
+    $genders = new stdClass();
+    foreach ($normalised as $name) {
+        $key = strtolower($name);
+        if (isset($map[$key])) {
+            $genders->$name = $map[$key];
+        }
+    }
+    return response()->json(['genders' => $genders]);
+});
 
 // API: paginated records for client-side rendering (filters supported)
 Route::get('/api/records', function (Request $request) {
@@ -1977,15 +2147,39 @@ Route::get('/api/records', function (Request $request) {
 
     $query = App\Models\IpRecord::query();
 
-    if ($request->filled('q')) {
+    if ($request->filled('record_id')) {
+        $query->whereRaw('TRIM(record_id) = ?', [trim($request->query('record_id'))]);
+    } elseif ($request->filled('q')) {
         $q = trim(strtolower($request->query('q')));
-        $query->whereRaw('LOWER(ip_title) LIKE ?', ["%{$q}%"])
-              ->orWhereRaw('LOWER(owner_inventor) LIKE ?', ["%{$q}%"]);
+        $query->where(function ($sub) use ($q) {
+            $sub->whereRaw('LOWER(ip_title) LIKE ?',             ["%{$q}%"])
+                ->orWhereRaw('LOWER(owner_inventor) LIKE ?',     ["%{$q}%"])
+                ->orWhereRaw('LOWER(record_id) LIKE ?',          ["%{$q}%"])
+                ->orWhereRaw('LOWER(registration_number) LIKE ?',["%{$q}%"]);
+        });
     }
 
     if ($request->filled('type'))    { $query->where('category', $request->query('type')); }
-    if ($request->filled('status'))  { $query->where('status', $request->query('status')); }
-    if ($request->filled('campus'))  { $query->where('campus', $request->query('campus')); }
+    if ($request->filled('status'))  {
+        $status = $request->query('status');
+        if ($status === 'Filed') {
+            $query->whereIn('status', ['Filed', 'Recently Filed']);
+        } else {
+            $query->where('status', $status);
+        }
+    }
+    if ($request->filled('campus')) {
+        $campusVal = $request->query('campus');
+        if ($campusVal === '__none__') {
+            $query->where(function($q) {
+                $q->whereNull('campus')
+                  ->orWhere('campus', '')
+                  ->orWhere('campus', 'N/A');
+            });
+        } else {
+            $query->where('campus', $campusVal);
+        }
+    }
     if ($request->filled('college')) { $query->where('college', $request->query('college')); }
     if ($request->filled('program')) { $query->where('program', $request->query('program')); }
     if ($request->filled('start'))   { $query->whereDate('date_registered_deposited', '>=', $request->query('start')); }
@@ -2020,9 +2214,9 @@ Route::get('/ipassets/create', function () {
         })
         ->toArray();
 
-    $campuses = collect($allRecords)->pluck('campus')->filter()->unique()->sort()->values()->all();
+    $campuses = collect($allRecords)->pluck('campus')->map(fn($c) => trim((string) $c))->filter(fn($c) => $c !== '' && strtoupper($c) !== 'N/A')->unique()->sort()->values()->toArray();
     $types    = ['Copyright', 'Industrial Design', 'Patent', 'Trademark', 'Utility Model'];
-    $statuses = ['Recently Filed', 'Registered', 'Unregistered', 'Under Review', 'Needs Attention', 'Returned'];
+    $statuses = ['Filed', 'Registered', 'Unregistered', 'Under Review', 'Needs Attention', 'Returned'];
 
     $user = (object)[
         'name'         => session('user_name', 'KTTM User'),
@@ -2042,7 +2236,8 @@ Route::get('/ipassets/create', function () {
     }
     $nextRecordId = 'KTTM-' . str_pad((string)$nextNumber, 3, '0', STR_PAD_LEFT);
 
-    return view('Newrecord', compact('user', 'campuses', 'types', 'statuses', 'nextRecordId'));
+    $showTutorial = (bool) session('show_tutorial', false);
+    return view('Newrecord', compact('user', 'campuses', 'types', 'statuses', 'nextRecordId', 'showTutorial'));
 })->name('ipassets.create');
 
 // API: search existing records by title substring
@@ -2066,6 +2261,60 @@ Route::get('/ipassets/check-title', function (Request $request) {
     return response()->json($matches);
 });
 
+// API: exact registration number check. Unlike similar titles, this blocks creation.
+Route::get('/ipassets/check-registration-number', function (Request $request) {
+    $registrationNumber = trim($request->query('registration_number', ''));
+    if ($registrationNumber === '') {
+        return response()->json(['exists' => false, 'record' => null]);
+    }
+
+    $record = IpRecord::whereRaw('LOWER(TRIM(registration_number)) = ?', [strtolower($registrationNumber)])
+        ->first(['record_id', 'ip_title', 'registration_number']);
+
+    return response()->json([
+        'exists' => (bool) $record,
+        'record' => $record ? [
+            'record_id' => $record->record_id,
+            'ip_title' => $record->ip_title,
+            'registration_number' => $record->registration_number,
+        ] : null,
+    ]);
+});
+
+// API: bulk exact-match title duplicate check for CSV preview
+Route::post('/api/check-titles-bulk', function (Request $request) {
+    $titles = $request->input('titles', []);
+    if (!is_array($titles) || empty($titles)) {
+        return response()->json(['duplicates' => new stdClass()]);
+    }
+    $normalised = array_values(array_unique(array_filter(array_map('trim', $titles))));
+    if (empty($normalised)) {
+        return response()->json(['duplicates' => new stdClass()]);
+    }
+    $lower = array_map('strtolower', $normalised);
+    $rows = IpRecord::whereRaw(
+        'LOWER(TRIM(ip_title)) IN (' . implode(',', array_fill(0, count($lower), '?')) . ')',
+        $lower
+    )->get(['record_id', 'ip_title']);
+
+    // Build map: lowercase-title -> [{record_id, ip_title}]
+    $map = [];
+    foreach ($rows as $r) {
+        $key = strtolower(trim($r->ip_title));
+        if (!isset($map[$key])) $map[$key] = [];
+        $map[$key][] = ['record_id' => $r->record_id, 'ip_title' => $r->ip_title];
+    }
+    // Return results keyed by the original supplied titles
+    $duplicates = new stdClass();
+    foreach ($normalised as $title) {
+        $key = strtolower($title);
+        if (isset($map[$key])) {
+            $duplicates->$title = $map[$key];
+        }
+    }
+    return response()->json(['duplicates' => $duplicates]);
+});
+
 /**
  * ✅ STORE NEW RECORD
  */
@@ -2076,6 +2325,8 @@ Route::post('/ipassets', function (Request $request) {
         'type'        => 'required|string|max:255',
         'status'      => 'required|string|max:255',
         'campus'      => 'required|string|max:255',
+        'date_creation' => 'nullable|date',
+        'date_of_filing' => 'nullable|date',
         'registered'  => 'nullable|date',
         'registration_number'   => 'nullable|string|max:255',
         'gdrive_link' => 'nullable|url|max:2048',
@@ -2083,13 +2334,46 @@ Route::post('/ipassets', function (Request $request) {
         'inventors'   => 'nullable|json',
     ]);
 
-    if (!empty($data['title'])) {
+    if (!empty($data['registered'])) {
+        $dateErrors = [];
+        $registeredDate = \Carbon\Carbon::parse($data['registered'])->toDateString();
+
+        if (!empty($data['date_creation']) && \Carbon\Carbon::parse($data['date_creation'])->toDateString() > $registeredDate) {
+            $dateErrors['date_creation'] = 'Date of creation cannot be after the registration date.';
+        }
+
+        if (!empty($data['date_of_filing']) && \Carbon\Carbon::parse($data['date_of_filing'])->toDateString() > $registeredDate) {
+            $dateErrors['date_of_filing'] = 'Date of filing cannot be after the registration date.';
+        }
+
+        if (!empty($dateErrors)) {
+            return redirect()->back()->withInput()->withErrors($dateErrors);
+        }
+    }
+
+    if (!empty($data['title']) && !$request->boolean('bypass_duplicate')) {
         $exists = IpRecord::whereRaw('LOWER(ip_title) = ?', [strtolower($data['title'])])->exists();
         if ($exists) {
             return redirect()->back()
                 ->withInput()
                 ->withErrors(['title' => 'A record with this title already exists. Please verify or edit the existing record.']);
         }
+    }
+
+    $registrationNumber = trim((string)($data['registration_number'] ?? ''));
+    if ($registrationNumber !== '') {
+        $existingRegistration = IpRecord::whereRaw('LOWER(TRIM(registration_number)) = ?', [strtolower($registrationNumber)])
+            ->first(['record_id', 'ip_title']);
+
+        if ($existingRegistration) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors([
+                    'registration_number' => "Registration number already used by {$existingRegistration->record_id} — {$existingRegistration->ip_title}. Each record must have a unique registration number.",
+                ]);
+        }
+
+        $data['registration_number'] = $registrationNumber;
     }
 
     return DB::transaction(function () use ($request, $data) {
@@ -2132,7 +2416,9 @@ Route::post('/ipassets', function (Request $request) {
         $record->category               = $data['type'];
         $record->owner_inventor = $ownerSummary ?? ($request->input('owner') ?? '');
         $record->campus                 = $data['campus'];
-        $record->status                 = $data['status'];
+        $record->status                 = $data['status'] === 'Recently Filed' ? 'Filed' : $data['status'];
+        $record->date_creation          = $data['date_creation'] ?? null;
+        $record->date_of_filing         = $data['date_of_filing'] ?? null;
         $record->date_registered_deposited = $data['registered'] ?? null;
         $record->registration_number              = $data['registration_number'] ?? null;
         $record->gdrive_link            = $data['gdrive_link'] ?? null;
@@ -2203,12 +2489,35 @@ Route::post('/records/{id}/update', function (Request $request, $id) {
         $record->campus = $new;
     }
     if ($request->has('status')) {
-        $old = $record->status; $new = $request->input('status');
+        $old = $record->status; $new = $request->input('status') === 'Recently Filed' ? 'Filed' : $request->input('status');
         if ($old !== $new) $changes['Status'] = ['old' => $old, 'new' => $new];
         $record->status = $new;
     }
+    if ($request->has('date_creation')) {
+        $old = $record->date_creation; $new = $request->input('date_creation') ?: null;
+        if ($old !== $new) $changes['Date Created'] = ['old' => $old, 'new' => $new];
+        $record->date_creation = $new;
+    }
+    if ($request->has('date_of_filing')) {
+        $old = $record->date_of_filing; $new = $request->input('date_of_filing') ?: null;
+        if ($old !== $new) $changes['Date of Filing'] = ['old' => $old, 'new' => $new];
+        $record->date_of_filing = $new;
+    }
     if ($request->has('registration_number')) {
-        $old = $record->registration_number; $new = $request->input('registration_number');
+        $old = $record->registration_number; $new = trim((string)$request->input('registration_number'));
+        if ($new !== '') {
+            $duplicateRegistration = IpRecord::whereRaw('LOWER(TRIM(registration_number)) = ?', [strtolower($new)])
+                ->whereRaw('TRIM(record_id) <> ?', [$record->record_id])
+                ->first(['record_id', 'ip_title']);
+
+            if ($duplicateRegistration) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Registration number already used by {$duplicateRegistration->record_id} — {$duplicateRegistration->ip_title}. Each record must have a unique registration number.",
+                ], 422);
+            }
+        }
+        $new = $new !== '' ? $new : null;
         if ($old !== $new) $changes['IPOPhl ID'] = ['old' => $old, 'new' => $new];
         $record->registration_number = $new;
     }
@@ -2226,6 +2535,24 @@ Route::post('/records/{id}/update', function (Request $request, $id) {
         $old = $record->date_registered_deposited; $new = $request->input('registered');
         if ($old !== $new) $changes['Date Registered'] = ['old' => $old, 'new' => $new];
         $record->date_registered_deposited = $new;
+    }
+
+    if ($record->date_registered_deposited) {
+        $registeredDate = \Carbon\Carbon::parse($record->date_registered_deposited)->toDateString();
+
+        if ($record->date_creation && \Carbon\Carbon::parse($record->date_creation)->toDateString() > $registeredDate) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Date of creation cannot be after the registration date.',
+            ], 422);
+        }
+
+        if ($record->date_of_filing && \Carbon\Carbon::parse($record->date_of_filing)->toDateString() > $registeredDate) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Date of filing cannot be after the registration date.',
+            ], 422);
+        }
     }
 
     $record->save();
@@ -2250,6 +2577,40 @@ Route::post('/records/{id}/update', function (Request $request, $id) {
         'id'      => $record->record_id,
     ]);
 })->name('records.update');
+
+Route::delete('/records/{id}', function (Request $request, $id) {
+    $id = trim(urldecode($id));
+    $record = IpRecord::whereRaw('TRIM(record_id) = ?', [$id])->first();
+
+    if (!$record) {
+        return response()->json([
+            'success' => false,
+            'message' => "Record not found: {$id}",
+        ], 404);
+    }
+
+    DB::transaction(function () use ($record) {
+        if (\Illuminate\Support\Facades\Schema::hasTable('ip_contributors')) {
+            DB::table('ip_contributors')
+                ->where('record_id', $record->record_id)
+                ->delete();
+        }
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('activity_logs')) {
+            DB::table('activity_logs')
+                ->where('record_id', $record->record_id)
+                ->delete();
+        }
+
+        $record->delete();
+    });
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Record deleted successfully',
+        'id'      => $id,
+    ]);
+})->name('records.destroy');
 
 
 /**
@@ -2285,10 +2646,13 @@ Route::get('/record-changes/{id}', function (Request $request, $id) {
         'avatar_color' => session('user_avatar_color', '#A52C30'),
     ];
 
+    $showTutorial = (bool) session('show_tutorial', false);
+
     return view('Modifiedrecords', [
-        'user'     => $user,
-        'record'   => $recordArr,
-        'recordId' => $id,
+        'user'         => $user,
+        'record'       => $recordArr,
+        'recordId'     => $id,
+        'showTutorial' => $showTutorial,
     ]);
 });
 
@@ -2379,11 +2743,11 @@ Route::match(['get', 'post'], '/guest', function () use ($maintenanceGuard, $tra
 
     $collection      = collect($records);
     $totalRecords    = $collection->count();
-    $pendingCount    = $collection->filter(fn($r) => strtolower($r['status'] ?? '') === 'pending')->count();
+    $filedCount      = $collection->filter(fn($r) => strtolower($r['status'] ?? '') === 'filed')->count();
     $registeredCount = $collection->filter(fn($r) => strtolower($r['status'] ?? '') === 'registered')->count();
     $campusCount     = $collection->pluck('campus')->filter()->unique()->count();
 
-    return view('guest', compact('guest', 'records', 'totalRecords', 'pendingCount', 'registeredCount', 'campusCount'));
+    return view('guest', compact('guest', 'records', 'totalRecords', 'filedCount', 'registeredCount', 'campusCount'));
 });
 
 Route::get('/how-to-file', function () { return view('Howtofile'); });
@@ -2414,11 +2778,11 @@ Route::get('/guest/records', function () use ($trackPresence) {
         })
         ->toArray();
 
-    $campuses = collect($allRecords)->pluck('campus')->filter()->unique()->sort()->values()->all();
-    $types    = collect($allRecords)->pluck('type')->filter()->unique()->sort()->values()->all();
-    $statuses = collect($allRecords)->pluck('status')->filter()->unique()->sort()->values()->all();
-    $colleges = IpRecord::select('college')->whereNotNull('college')->distinct()->pluck('college')->filter()->sort()->values()->all();
-    $programs = IpRecord::select('program')->whereNotNull('program')->distinct()->pluck('program')->filter()->sort()->values()->all();
+    $campuses = collect($allRecords)->pluck('campus')->map(fn($c) => trim((string) $c))->filter(fn($c) => $c !== '' && strtoupper($c) !== 'N/A')->unique()->sort()->values()->all();
+    $types    = collect($allRecords)->pluck('type')->map(fn($t) => trim((string) $t))->filter()->unique()->sort()->values()->all();
+    $statuses = collect($allRecords)->pluck('status')->map(fn($s) => trim((string) $s))->filter()->unique()->sort()->values()->all();
+    $colleges = IpRecord::select('college')->whereNotNull('college')->pluck('college')->map(fn($c) => trim((string) $c))->filter(fn($c) => $c !== '' && $c !== '-' && $c !== '—' && strtoupper($c) !== 'N/A')->unique()->sort()->values()->all();
+    $programs = IpRecord::select('program')->whereNotNull('program')->pluck('program')->map(fn($p) => trim((string) $p))->filter(fn($p) => $p !== '' && $p !== '-' && $p !== '—' && strtoupper($p) !== 'N/A')->unique()->sort()->values()->all();
 
     $user = (object)[
         'name' => 'Guest Viewer',
@@ -2468,7 +2832,8 @@ Route::get('/insights', function () {
         'avatar_color' => session('user_avatar_color', '#A52C30'),
     ];
 
-    return view('insights', compact('user', 'allRecords'));
+    $showTutorial = (bool) session('show_tutorial', false);
+    return view('insights', compact('user', 'allRecords', 'showTutorial'));
 })->name('insights');
 
 Route::get('/records/{id}/print', function (\Illuminate\Http\Request $request, $id) {
@@ -2541,3 +2906,248 @@ Route::get('/api/recent-updates', function (Request $request) {
         return response()->json(['updates' => [], 'error' => $e->getMessage()], 500);
     }
 });
+
+/**
+ * ✅ BATCH IMPORT RECORDS (CSV)
+ *
+ * Accepts a JSON body: { "rows": [ { title, type, status, ... }, ... ] }
+ * Rows are pre-validated on the frontend; backend re-validates for safety.
+ * Each valid row gets its own KTTM-xxx ID (locked transaction per row).
+ * Duplicate titles are skipped (not failed) and reported in the response.
+ */
+Route::post('/records/batch-import', function (Request $request) {
+
+    // Auth guard — must be a logged-in admin/staff
+    if (!$request->session()->has('user_id')) {
+        return response()->json(['success' => false, 'message' => 'Unauthenticated.'], 401);
+    }
+
+    $rows = $request->input('rows');
+
+    if (!is_array($rows) || count($rows) === 0) {
+        return response()->json(['success' => false, 'message' => 'No rows provided.'], 422);
+    }
+
+    if (count($rows) > 500) {
+        return response()->json(['success' => false, 'message' => 'Maximum 500 rows per batch.'], 422);
+    }
+
+    $validTypes    = ['Copyright', 'Industrial Design', 'Patent', 'Trademark', 'Utility Model'];
+    $validStatuses = ['Registered', 'Filed', 'Unregistered', 'Close to Expiry'];
+
+    $inserted = 0;
+    $skipped  = 0;
+    $failed   = [];
+
+    $actorName = $request->session()->get('user_name', 'System');
+
+    foreach ($rows as $index => $row) {
+        $rowNum = $index + 1;
+
+        // ── Re-validate each row server-side ──
+        $title  = trim($row['title_of_work'] ?? $row['title'] ?? '');
+        $type   = trim($row['type']   ?? '');
+        $status = trim($row['status'] ?? '');
+
+        if ($title === '') {
+            $failed[] = ['row' => $rowNum, 'reason' => 'Title is required'];
+            continue;
+        }
+        if (!in_array($type, $validTypes)) {
+            $failed[] = ['row' => $rowNum, 'reason' => "Invalid type: {$type}"];
+            continue;
+        }
+        if (!in_array($status, $validStatuses)) {
+            $failed[] = ['row' => $rowNum, 'reason' => "Invalid status: {$status}"];
+            continue;
+        }
+
+        // ── Skip duplicates by title ──
+        $exists = IpRecord::whereRaw('LOWER(ip_title) = ?', [strtolower($title)])->exists();
+        if ($exists) {
+            $skipped++;
+            $failed[] = ['row' => $rowNum, 'reason' => "Duplicate title — already exists: \"{$title}\""];
+            continue;
+        }
+
+        $registrationNumber = trim($row['registration_number'] ?? '');
+        if ($registrationNumber !== '') {
+            $existingRegistration = IpRecord::whereRaw('LOWER(TRIM(registration_number)) = ?', [strtolower($registrationNumber)])
+                ->first(['record_id', 'ip_title']);
+
+            if ($existingRegistration) {
+                $skipped++;
+                $failed[] = ['row' => $rowNum, 'reason' => "Duplicate registration number — already used by {$existingRegistration->record_id}: \"{$registrationNumber}\""];
+                continue;
+            }
+        }
+
+        $dateRegisteredCheck = null;
+        if (!empty($row['date_registered_deposited'])) {
+            try { $dateRegisteredCheck = \Carbon\Carbon::parse($row['date_registered_deposited'])->toDateString(); }
+            catch (\Exception $e) { $dateRegisteredCheck = null; }
+        }
+        if ($dateRegisteredCheck) {
+            $smartDateCheck = trim($row['date_smart'] ?? $row['date_of_creation'] ?? '');
+            $isCopyrightCheck = strtolower(trim($type)) === 'copyright';
+            $dateCreationCheck = null;
+            $dateOfFilingCheck = null;
+
+            if ($smartDateCheck !== '') {
+                try {
+                    $parsedSmart = \Carbon\Carbon::parse($smartDateCheck)->toDateString();
+                    if ($isCopyrightCheck) $dateOfFilingCheck = $parsedSmart;
+                    else $dateCreationCheck = $parsedSmart;
+                } catch (\Exception $e) {}
+            }
+
+            if (!empty($row['date_of_filing'])) {
+                try { $dateOfFilingCheck = \Carbon\Carbon::parse($row['date_of_filing'])->toDateString(); }
+                catch (\Exception $e) {}
+            }
+
+            if ($dateCreationCheck && $dateCreationCheck > $dateRegisteredCheck) {
+                $failed[] = ['row' => $rowNum, 'reason' => 'Date of creation cannot be after the registration date'];
+                continue;
+            }
+            if ($dateOfFilingCheck && $dateOfFilingCheck > $dateRegisteredCheck) {
+                $failed[] = ['row' => $rowNum, 'reason' => 'Date of filing cannot be after the registration date'];
+                continue;
+            }
+        }
+
+        // ── Insert in a transaction to safely generate the next KTTM-xxx ID ──
+        try {
+            DB::transaction(function () use ($row, $title, $type, $status, $actorName, &$inserted) {
+
+                // Lock and compute next ID
+                $allIds = IpRecord::where('record_id', 'like', 'KTTM-%')->lockForUpdate()->get();
+                $nextNumber = 1;
+                foreach ($allIds as $r) {
+                    if (preg_match('/KTTM-(\d+)$/', $r->record_id, $m)) {
+                        $num = (int)$m[1];
+                        if ($num >= $nextNumber) $nextNumber = $num + 1;
+                    }
+                }
+                $recordId = 'KTTM-' . str_pad((string)$nextNumber, 3, '0', STR_PAD_LEFT);
+
+                // Build inventor/owner summary from authors_list (per-author with gender)
+                // Fall back to flat authors string if authors_list not provided
+                $authorsList  = $row['authors_list'] ?? null;
+                $ownerSummary = null;
+
+                if (is_array($authorsList) && count($authorsList) > 0) {
+                    $ownerSummary = implode('; ', array_filter(array_map(fn($a) => trim($a['name'] ?? ''), $authorsList)));
+                } else {
+                    // Legacy fallback — flat authors string
+                    $ownerSummary = trim($row['authors'] ?? '') ?: null;
+                }
+
+                // Parse dates safely
+                // date_smart = Option A merged column — routes to date_of_filing for Copyright,
+                // date_creation for all other types
+                $smartDate    = trim($row['date_smart'] ?? $row['date_of_creation'] ?? '');
+                $isCopyright  = strtolower(trim($type)) === 'copyright';
+
+                $dateCreation = null;
+                $dateOfFiling = null;
+
+                if ($smartDate !== '') {
+                    try {
+                        $parsed = \Carbon\Carbon::parse($smartDate)->toDateString();
+                        if ($isCopyright) {
+                            $dateOfFiling = $parsed;   // For Copyright: smart date = creation date stored in date_of_filing
+                        } else {
+                            $dateCreation = $parsed;   // For Patent/UM/Design/Trademark: smart date = filing/creation date
+                        }
+                    } catch (\Exception $e) {}
+                }
+
+                $dateRegistered = null;
+                if (!empty($row['date_registered_deposited'])) {
+                    try { $dateRegistered = \Carbon\Carbon::parse($row['date_registered_deposited'])->toDateString(); }
+                    catch (\Exception $e) { $dateRegistered = null; }
+                }
+
+                // Create the record
+                $record = new IpRecord();
+                $record->record_id                 = $recordId;
+                $record->ip_title                  = $title;
+                $record->category                  = $type;
+                $record->status                    = $status;
+                $record->owner_inventor            = $ownerSummary;
+                $record->campus                    = trim($row['campus']              ?? '') ?: null;
+                $record->college                   = trim($row['college']             ?? '') ?: null;
+                $record->program                   = trim($row['program']             ?? '') ?: null;
+                $record->class_of_work             = trim($row['class_of_work']       ?? '') ?: null;
+                $record->registration_number       = trim($row['registration_number'] ?? '') ?: null;
+                $record->date_creation             = $dateCreation;
+                $record->date_of_filing            = $dateOfFiling;
+                $record->date_registered_deposited = $dateRegistered;
+                $record->gdrive_link               = trim($row['hyperlink']           ?? '') ?: null;
+                $record->remarks                   = trim($row['remarks']             ?? '') ?: null;
+                $record->save();
+
+                // Insert contributor rows — one per author with their individual gender
+                $contributorRows = [];
+                if (is_array($authorsList) && count($authorsList) > 0) {
+                    foreach ($authorsList as $author) {
+                        $name   = trim($author['name'] ?? '');
+                        $gender = trim($author['gender'] ?? '') ?: null;
+                        if ($gender) $gender = ucfirst(strtolower($gender));
+                        if ($name !== '') {
+                            $contributorRows[] = [
+                                'record_id'        => $recordId,
+                                'contributor_name' => $name,
+                                'gender'           => $gender,
+                            ];
+                        }
+                    }
+                } elseif (!empty($ownerSummary)) {
+                    // Legacy fallback — single contributor row, no gender
+                    $contributorRows[] = [
+                        'record_id'        => $recordId,
+                        'contributor_name' => $ownerSummary,
+                        'gender'           => null,
+                    ];
+                }
+
+                if (!empty($contributorRows)) {
+                    try {
+                        DB::table('ip_contributors')->insert($contributorRows);
+                    } catch (\Exception $e) {
+                        \Log::info("Batch import: could not insert contributors for {$recordId}: " . $e->getMessage());
+                    }
+                }
+
+                // Log to activity_log (same pattern as manual record creation)
+                try {
+                    \App\Models\ActivityLog::create([
+                        'record_id'    => $recordId,
+                        'record_title' => $title,
+                        'action'       => 'Created',
+                        'user_name'    => $actorName,
+                        'changes'      => json_encode(['source' => 'Batch CSV Import']),
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::info("Batch import: activity log failed for {$recordId}: " . $e->getMessage());
+                }
+
+                $inserted++;
+            });
+
+        } catch (\Exception $e) {
+            \Log::error("Batch import row {$rowNum} failed: " . $e->getMessage());
+            $failed[] = ['row' => $rowNum, 'reason' => 'Server error — row skipped'];
+        }
+    }
+
+    return response()->json([
+        'success'  => true,
+        'inserted' => $inserted,
+        'skipped'  => $skipped,
+        'failed'   => $failed,
+        'message'  => "Batch import complete: {$inserted} inserted, {$skipped} skipped (duplicates).",
+    ]);
+
+})->name('records.batch-import');

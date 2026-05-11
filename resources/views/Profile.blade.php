@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>KTTM — Profile</title>
+  <link rel="icon" type="image/png" href="{{ asset('images/KTTMLOGOFAV-512.png') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 
@@ -175,13 +176,17 @@
        CONTENT
     ══════════════════════════════════════ */
     .content {
-      padding: clamp(14px, 2.5vw, 24px) var(--pad-x);
-      flex: 1;
-      width: 100%;
-      max-width: var(--shell-max);
-      margin: 0 auto;
-      box-sizing: border-box;
-    }
+  padding: clamp(14px, 2.5vw, 24px) var(--pad-x);
+  flex: 1;
+  width: 100%;
+  max-width: var(--shell-max);
+  margin: 0 auto;
+  box-sizing: border-box;
+  background-color: #EEE9E9;
+  background-image: linear-gradient(rgba(165,44,48,.055) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(165,44,48,.055) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
 
     /* ══════════════════════════════════════
        HERO BANNER
@@ -768,7 +773,7 @@
     </span>
   </div>
 
-  <nav class="sidebar-nav">
+  <nav class="sidebar-nav" id="tutorialProfileSidebar">
     <a href="{{ $urlHome }}" class="nav-item">
       <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
         <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
@@ -833,7 +838,7 @@
         <div class="page-subtitle">Manage your account details and security</div>
       </div>
     </div>
-    <div class="topbar-right">
+    <div class="topbar-right" id="tutorialProfileTopbarActions">
       <a href="{{ $urlHome }}" class="btn-back" title="Back to Dashboard">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
           <polyline points="15 18 9 12 15 6"/>
@@ -847,7 +852,7 @@
   <div class="content">
 
     {{-- ── HERO BANNER ── --}}
-    <div class="profile-hero">
+    <div class="profile-hero" id="tutorialProfileHero">
       <div class="hero-grid"></div>
 
       <div class="hero-panel">
@@ -900,7 +905,7 @@
     <div class="profile-grid">
 
       {{-- ── CARD 1: Account Information ── --}}
-      <div class="section-card">
+      <div class="section-card" id="tutorialProfileAccountCard">
         <div class="section-head">
           <div class="section-icon">
             <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -1037,7 +1042,7 @@
       </div>
 
       {{-- ── CARD 2: Change Password ── --}}
-      <div class="section-card">
+      <div class="section-card" id="tutorialProfilePasswordCard">
         <div class="section-head">
           <div class="section-icon">
             <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -1114,7 +1119,7 @@
       </div>
 
       {{-- ── CARD 3: Session Info ── --}}
-      <div class="section-card">
+      <div class="section-card" id="tutorialProfileSessionCard">
         <div class="section-head">
           <div class="section-icon">
             <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -1172,7 +1177,7 @@
       </div>
 
       {{-- ── CARD 4: Change Profile Picture ── --}}
-      <div class="section-card">
+      <div class="section-card" id="tutorialProfileAvatarCard">
         <div class="section-head">
           <div class="section-icon">
             <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -1284,7 +1289,7 @@
 
 {{-- ══════════════ LOGOUT MODAL ══════════════ --}}
 <div class="modal-overlay" id="logoutModal">
-  <div class="modal-box">
+  <div class="modal-box" id="tutorialProfileLogoutModalBox">
     <div class="modal-icon">
       <svg width="22" height="22" fill="none" stroke="var(--maroon)" stroke-width="2" viewBox="0 0 24 24">
         <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
@@ -1850,7 +1855,320 @@
   window.addEventListener('resize', function() {
     if (window.innerWidth > 768) closeMobileSidebar();
   });
+
+  window.KTTMProfileTutorialApi = {
+    openLogout: function() {
+      document.getElementById('logoutModal')?.classList.add('open');
+      syncBodyScrollLock();
+    },
+    closeLogout: function() {
+      document.getElementById('logoutModal')?.classList.remove('open');
+      syncBodyScrollLock();
+    },
+  };
 </script>
+
+@if(isset($showTutorial) && $showTutorial)
+<style>
+  #kttmTut7Overlay { position: fixed; inset: 0; z-index: 9000; pointer-events: all; }
+  #kttmTut7Svg     { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 9001; pointer-events: none; }
+  #kttmTut7Card {
+    position: fixed; z-index: 9002; background: #fff; border-radius: 18px;
+    padding: 22px 24px 18px; width: min(390px, calc(100vw - 32px));
+    box-shadow: 0 24px 64px rgba(0,0,0,.22), 0 0 0 1px rgba(0,0,0,.06);
+    transition: top .32s cubic-bezier(.4,0,.2,1), left .32s cubic-bezier(.4,0,.2,1), opacity .22s ease;
+  }
+  #kttmTut7Card.tut-hidden { opacity: 0; pointer-events: none; }
+  .tut7-label { font-size: .62rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #A52C30; margin-bottom: 6px; font-family: 'DM Mono', monospace; }
+  .tut7-title { font-size: 1rem; font-weight: 800; color: #0F172A; margin-bottom: 6px; line-height: 1.3; }
+  .tut7-desc  { font-size: .82rem; color: #64748B; line-height: 1.6; margin-bottom: 16px; }
+  .tut7-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .tut7-dots { display: flex; gap: 5px; align-items: center; }
+  .tut7-dot { width: 6px; height: 6px; border-radius: 50%; background: #e2e8f0; transition: background .2s, width .2s; }
+  .tut7-dot.active { background: #A52C30; width: 18px; border-radius: 3px; }
+  .tut7-actions { display: flex; gap: 8px; }
+  .tut7-btn-skip {
+    padding: 8px 14px; border-radius: 10px; border: 1.5px solid #e2e8f0; background: none;
+    font-family: inherit; font-size: .75rem; font-weight: 700; color: #94a3b8; cursor: pointer; transition: all .15s;
+  }
+  .tut7-btn-skip:hover { border-color: #A52C30; color: #A52C30; }
+  .tut7-btn-back {
+    padding: 8px 14px; border-radius: 10px; border: 1.5px solid #e2e8f0; background: #fff;
+    font-family: inherit; font-size: .75rem; font-weight: 700; color: #64748B; cursor: pointer; transition: all .15s;
+  }
+  .tut7-btn-back:hover:not(:disabled) { border-color: #A52C30; color: #A52C30; }
+  .tut7-btn-back:disabled { opacity: .45; cursor: not-allowed; }
+  .tut7-btn-next {
+    padding: 8px 20px; border-radius: 10px; border: none;
+    background: linear-gradient(135deg, #A52C30, #7E1F23);
+    font-family: inherit; font-size: .75rem; font-weight: 800; color: #fff; cursor: pointer;
+    box-shadow: 0 4px 12px rgba(165,44,48,.3); transition: transform .15s, box-shadow .15s;
+  }
+  .tut7-btn-next:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(165,44,48,.4); }
+  #kttmTut7Pulse {
+    position: fixed; z-index: 9003; border-radius: 14px;
+    border: 2.5px solid #F0C860; pointer-events: none;
+    animation: tut7Pulse 1.8s ease-out infinite;
+    transition: all .32s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes tut7Pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(240,200,96,.55); }
+    70%  { box-shadow: 0 0 0 10px rgba(240,200,96,0); }
+    100% { box-shadow: 0 0 0 0 rgba(240,200,96,0); }
+  }
+</style>
+
+<div id="kttmTut7Overlay"></div>
+<svg id="kttmTut7Svg" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <mask id="kttmTut7Mask">
+      <rect width="100%" height="100%" fill="white"/>
+      <rect id="kttmTut7Hole" x="0" y="0" width="0" height="0" rx="14" fill="black"/>
+    </mask>
+  </defs>
+  <rect width="100%" height="100%" fill="rgba(10,14,26,0.72)" mask="url(#kttmTut7Mask)"/>
+</svg>
+<div id="kttmTut7Pulse"></div>
+<div id="kttmTut7Card" class="tut-hidden">
+  <div class="tut7-label" id="kttmTut7Label">Step 1 of 8</div>
+  <div class="tut7-title" id="kttmTut7Title"></div>
+  <div class="tut7-desc" id="kttmTut7Desc"></div>
+  <div class="tut7-footer">
+    <div class="tut7-dots" id="kttmTut7Dots"></div>
+    <div class="tut7-actions">
+      <button class="tut7-btn-skip" id="kttmTut7Skip">Skip tutorial</button>
+      <button class="tut7-btn-back" id="kttmTut7Back" disabled>Back</button>
+      <button class="tut7-btn-next" id="kttmTut7Next">Next</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const STEPS = [
+    {
+      target: 'tutorialProfileSidebar',
+      title: 'Navigation Sidebar',
+      desc: 'This sidebar keeps the rest of the system one click away. Profile is highlighted because you are on the last tutorial page, and the logout button sits at the bottom of the same rail.',
+    },
+    {
+      target: 'tutorialProfileTopbarActions',
+      title: 'Topbar Actions',
+      desc: 'The top bar confirms that this is your profile workspace. The Back to Dashboard button returns you to the main home page without changing any profile data.',
+    },
+    {
+      target: 'tutorialProfileHero',
+      title: 'Profile Hero',
+      desc: 'This banner summarizes your account at a glance: your avatar or initials, full name, base role, optional custom role, account email, current year marker, and session-active badge.',
+    },
+    {
+      target: 'tutorialProfileAccountCard',
+      title: 'Account Information',
+      desc: 'This card contains your editable identity details. You can change your full name, adjust the base role when allowed, set or remove a custom role, and review your account email and account ID.',
+    },
+    {
+      target: 'tutorialProfilePasswordCard',
+      title: 'Change Password',
+      desc: 'This section is for account security. It asks for your current password, checks the strength of your new one, confirms the match, and saves the update only when the new password passes validation.',
+    },
+    {
+      target: 'tutorialProfileSessionCard',
+      title: 'Session Info',
+      desc: 'This panel shows the live session context for the account currently signed in: your name, account email, session start date, and active login status.',
+    },
+    {
+      target: 'tutorialProfileAvatarCard',
+      title: 'Profile Picture',
+      desc: 'Use this section to upload or replace your profile photo. It previews the current image, accepts drag-and-drop or file selection, validates image type and size, and uploads the new avatar when you click Upload Photo.',
+    },
+    {
+      target: 'tutorialProfileLogoutModalBox',
+      title: 'Logout Confirmation',
+      desc: 'If you choose Sign Out from the sidebar, this confirmation modal appears before your session ends. Cancel keeps you on the page, while Sign Out returns you to the login flow.',
+      beforeShow: ensureLogoutModalOpen,
+    },
+  ];
+
+  let current = 0;
+  const TOTAL = STEPS.length;
+  const PAD = 12;
+
+  const overlay = document.getElementById('kttmTut7Overlay');
+  const hole = document.getElementById('kttmTut7Hole');
+  const pulse = document.getElementById('kttmTut7Pulse');
+  const card = document.getElementById('kttmTut7Card');
+  const labelEl = document.getElementById('kttmTut7Label');
+  const titleEl = document.getElementById('kttmTut7Title');
+  const descEl = document.getElementById('kttmTut7Desc');
+  const dotsEl = document.getElementById('kttmTut7Dots');
+  const skipBtn = document.getElementById('kttmTut7Skip');
+  const backBtn = document.getElementById('kttmTut7Back');
+  const nextBtn = document.getElementById('kttmTut7Next');
+
+  function syncNavButtons() {
+    backBtn.disabled = current === 0;
+  }
+
+  function buildDots() {
+    dotsEl.innerHTML = STEPS.map((_, i) =>
+      `<div class="tut7-dot${i === current ? ' active' : ''}"></div>`
+    ).join('');
+  }
+
+  function getApi() {
+    return window.KTTMProfileTutorialApi || null;
+  }
+
+  function ensureLogoutModalOpen() {
+    const api = getApi();
+    if (!api) return Promise.resolve();
+    return new Promise(resolve => {
+      setTimeout(() => {
+        api.openLogout?.();
+        setTimeout(resolve, 220);
+      }, 180);
+    });
+  }
+
+  function closeLogoutModalIfOpen() {
+    const api = getApi();
+    api?.closeLogout?.();
+  }
+
+  function showStep(idx) {
+    const step = STEPS[idx];
+    const proceed = () => {
+      const el = document.getElementById(step.target);
+      if (!el) { goNext(); return; }
+
+      const r = el.getBoundingClientRect();
+      if (r.top < 0 || r.bottom > window.innerHeight) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+        setTimeout(() => positionCard(el, idx), 380);
+      } else {
+        positionCard(el, idx);
+      }
+    };
+
+    if (typeof step.beforeShow === 'function') {
+      Promise.resolve(step.beforeShow()).then(proceed);
+    } else {
+      if (step.target !== 'tutorialProfileLogoutModalBox') closeLogoutModalIfOpen();
+      proceed();
+    }
+  }
+
+  function positionCard(el, idx) {
+    const r = el.getBoundingClientRect();
+    const x = Math.floor(r.left - PAD);
+    const y = Math.floor(r.top - PAD);
+    const w = Math.ceil(r.width + PAD * 2);
+    const h = Math.ceil(r.height + PAD * 2);
+
+    hole.setAttribute('x', x);
+    hole.setAttribute('y', y);
+    hole.setAttribute('width', w);
+    hole.setAttribute('height', h);
+    pulse.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px;`;
+
+    labelEl.textContent = `Step ${idx + 1} of ${TOTAL}`;
+    titleEl.textContent = STEPS[idx].title;
+    descEl.textContent = STEPS[idx].desc;
+    nextBtn.textContent = idx === TOTAL - 1 ? 'Finish' : 'Next';
+    syncNavButtons();
+    document.querySelectorAll('.tut7-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
+
+    const cardW = Math.min(390, window.innerWidth - 32);
+    const cardH = card.offsetHeight || 220;
+    const gap = 16;
+    let left = x;
+    let top = y + h + gap;
+
+    if (left + cardW > window.innerWidth - gap) left = window.innerWidth - cardW - gap;
+    if (left < gap) left = gap;
+    if (top + cardH > window.innerHeight - gap) top = y - cardH - gap;
+    if (top < gap) top = gap;
+
+    card.style.cssText += `left:${left}px;top:${top}px;width:${cardW}px;`;
+    card.classList.remove('tut-hidden');
+  }
+
+  async function finishTutorial() {
+    hideOverlay();
+    sessionStorage.setItem('kttm_tut_page', 'done_profile');
+    try {
+      await fetch('/tutorial/dismiss', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+      });
+    } catch (e) {}
+  }
+
+  function goNext() {
+    current++;
+    if (current >= TOTAL) {
+      finishTutorial();
+    } else {
+      showStep(current);
+    }
+  }
+
+  function goBack() {
+    if (current === 0) return;
+    current--;
+    showStep(current);
+  }
+
+  function hideOverlay() {
+    closeLogoutModalIfOpen();
+    card.classList.add('tut-hidden');
+    overlay.style.display = 'none';
+    document.getElementById('kttmTut7Svg').style.display = 'none';
+    pulse.style.display = 'none';
+  }
+
+  async function dismiss() {
+    hideOverlay();
+    sessionStorage.removeItem('kttm_tut_page');
+    try {
+      await fetch('/tutorial/dismiss', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+      });
+    } catch (e) {}
+  }
+
+  skipBtn.addEventListener('click', dismiss);
+  backBtn.addEventListener('click', goBack);
+  nextBtn.addEventListener('click', goNext);
+
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => showStep(current), 120);
+  });
+
+  function boot() {
+    if (sessionStorage.getItem('kttm_tut_page') !== 'profile') return;
+    buildDots();
+    showStep(0);
+  }
+
+  if (document.readyState === 'complete') setTimeout(boot, 650);
+  else window.addEventListener('load', () => setTimeout(boot, 650));
+})();
+</script>
+@endif
 
 </body>
 </html>

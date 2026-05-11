@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="csrf-token" content="{{ csrf_token() }}" />
   <title>KTTM — Developer Panel</title>
+  <link rel="icon" type="image/png" href="{{ asset('images/KTTMLOGOFAV-512.png') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 
@@ -372,6 +373,25 @@
     .sdot.on  { background: var(--green); box-shadow: 0 0 0 3px rgba(16,185,129,.2); }
     .sdot.off { background: var(--muted); }
 
+    /* Online now indicator — separate from active/inactive */
+    .online-pill {
+      display: none;
+      align-items: center; gap: 4px;
+      padding: 2px 7px; border-radius: 20px;
+      background: rgba(16,185,129,.12);
+      border: 1px solid rgba(16,185,129,.25);
+      font-size: 0.6rem; font-weight: 700;
+      letter-spacing: .08em; text-transform: uppercase;
+      color: var(--green);
+      white-space: nowrap;
+    }
+    .online-pill.visible { display: inline-flex; }
+    .online-pill-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s infinite;
+    }
+
     /* ══════════════════════════════════════
        AUDIT LOG
     ══════════════════════════════════════ */
@@ -596,6 +616,10 @@
     /* Impersonate button */
     .u-btn-imp { color: var(--purple); border-color: rgba(139,92,246,.3); }
     .u-btn-imp:hover { background: var(--purple-dim); }
+    .u-btn-tut-on  { color: var(--amber); border-color: rgba(245,158,11,.3); }
+    .u-btn-tut-on:hover  { background: var(--amber-dim); }
+    .u-btn-tut-off { color: var(--muted2); border-color: var(--line); }
+    .u-btn-tut-off:hover { color: var(--ink2); background: var(--bg3); }
 
     /* ══════════════════════════════════════
        IMPERSONATION FLOATING BAR
@@ -1370,7 +1394,12 @@
                   @if($u->avatar_image)<img src="{{ asset('storage/avatars/'.$u->avatar_image) }}" alt="{{ $uI }}">@else{{ $uI }}@endif
                 </div>
                 <div class="u-info">
-                  <div class="u-name">{{ $u->name }}</div>
+                  <div class="u-name" style="display:flex;align-items:center;gap:6px;">
+                    {{ $u->name }}
+                    <span class="online-pill" id="opill{{ $u->id }}">
+                      <span class="online-pill-dot"></span> Online
+                    </span>
+                  </div>
                   <div class="u-meta">{{ ucfirst($u->role) }} · <span id="albl{{ $u->id }}">{{ $u->is_active ? 'Active' : 'Inactive' }}</span> · {{ $ll }}</div>
                 </div>
                 <div class="u-actions">
@@ -1389,6 +1418,11 @@
                   <button class="u-btn {{ $u->is_active ? 'u-btn-off' : 'u-btn-on' }}" id="tbtn{{ $u->id }}" onclick="toggleActive({{ $u->id }})">
                     <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 11-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
                     <span id="tlbl{{ $u->id }}">{{ $u->is_active ? 'Deactivate' : 'Activate' }}</span>
+                  </button>
+                  @php $tutOn = (bool)($u->show_tutorial ?? false); @endphp
+                  <button class="u-btn {{ $tutOn ? 'u-btn-tut-on' : 'u-btn-tut-off' }}" id="tutbtn{{ $u->id }}" onclick="toggleTutorial({{ $u->id }})">
+                    <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <span id="tutlbl{{ $u->id }}">{{ $tutOn ? 'Tutorial On' : 'Tutorial Off' }}</span>
                   </button>
                 </div>
               </div>
@@ -2248,6 +2282,34 @@
     } catch(e) { showToast('Something went wrong.', 'error'); }
   }
 
+  /* ── Toggle Tutorial ── */
+  async function toggleTutorial(id) {
+    const btn    = document.getElementById(`tutbtn${id}`);
+    const lbl    = document.getElementById(`tutlbl${id}`);
+    const isOn   = lbl.textContent.trim() === 'Tutorial On';
+    const newVal = !isOn;
+    btn.disabled = true;
+    try {
+      const resp = await fetch(`/dev/users/${id}/toggle-tutorial`, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF },
+        body:    JSON.stringify({ show_tutorial: newVal }),
+      });
+      const data = await resp.json();
+      if (resp.ok && data.success) {
+        btn.className   = `u-btn ${newVal ? 'u-btn-tut-on' : 'u-btn-tut-off'}`;
+        lbl.textContent = newVal ? 'Tutorial On' : 'Tutorial Off';
+        showToast(data.message);
+      } else {
+        showToast(data.message || 'Failed to update tutorial.', 'error');
+      }
+    } catch(e) {
+      showToast('Something went wrong.', 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   /* ── Login History ── */
   async function openHistory(id, name) {
     document.getElementById('historyTitle').textContent = `Activity — ${name}`;
@@ -2366,6 +2428,31 @@
   window.addEventListener('resize', function() {
     if (window.innerWidth > 768) closeMobileSidebar();
   });
+  /* ── Online Users Poller ── */
+  async function pollOnlineUsers() {
+    try {
+      const resp = await fetch('/dev/users/online', {
+        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF }
+      });
+      const data = await resp.json();
+      if (resp.ok && data.success) {
+        // Reset all pills first
+        document.querySelectorAll('.online-pill').forEach(el => el.classList.remove('visible'));
+        // Light up pills for currently online users
+        data.online_ids.forEach(id => {
+          const pill = document.getElementById(`opill${id}`);
+          if (pill) pill.classList.add('visible');
+        });
+      }
+    } catch(e) {
+      // Fail silently — polling must never interrupt the UI
+    }
+  }
+
+  // Run immediately on page load, then every 30 seconds
+  pollOnlineUsers();
+  setInterval(pollOnlineUsers, 30000);
+
 </script>
 </body>
 </html>

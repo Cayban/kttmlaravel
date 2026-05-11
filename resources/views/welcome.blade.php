@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>KTTM — Intellectual Property Records System</title>
+<link rel="icon" type="image/png" href="{{ asset('images/KTTMLOGOFAV-512.png') }}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -52,31 +53,6 @@
     .modal-close,
     .role-btn,
     .field input,
-    .btn-login,
-    .service-card,
-    .faq-item {
-      cursor: none;
-    }
-  }
-
-  /* ── CUSTOM CURSOR ── */
-  .cursor {
-    position: fixed; width: 10px; height: 10px;
-    border-radius: 50%; background: var(--maroon);
-    pointer-events: none; z-index: 9999;
-    mix-blend-mode: multiply;
-  }
-  .cursor-ring {
-    position: fixed; width: 34px; height: 34px;
-    border-radius: 50%; border: 1.5px solid var(--gold);
-    pointer-events: none; z-index: 9998;
-    transition: left 0.28s cubic-bezier(.17,.67,.35,1.1),
-                top  0.28s cubic-bezier(.17,.67,.35,1.1);
-    transform: translate(-50%, -50%);
-    opacity: 0.7;
-  }
-  @media (pointer: coarse) {
-    .cursor, .cursor-ring { display: none !important; }
   }
 
   /* ── NAV ── */
@@ -1051,6 +1027,63 @@
     flex-wrap: wrap;
   }
 
+  /* ── DEVELOPER CARDS (FAQ Panel 6) ── */
+  .dev-cards { display: flex; flex-direction: column; gap: 12px; margin-top: 0; }
+  .dev-card {
+    background: var(--card); border: 1.5px solid var(--line);
+    border-radius: 20px; padding: 16px 18px;
+    display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 2px 12px rgba(15,23,42,0.05);
+    transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
+  }
+  .dev-card:hover {
+    border-color: rgba(165,44,48,0.25);
+    box-shadow: 0 6px 24px rgba(165,44,48,0.10);
+    transform: translateY(-2px);
+  }
+  .dev-avatar {
+    width: 48px; height: 48px; border-radius: 14px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--maroon2), var(--maroon));
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Mono', monospace; font-size: 0.88rem;
+    font-weight: 700; color: var(--gold);
+    box-shadow: 0 4px 14px rgba(165,44,48,0.28);
+    letter-spacing: 0.04em;
+  }
+  .dev-info { flex: 1 1 0; min-width: 0; }
+  .dev-name {
+    font-size: 0.88rem; font-weight: 800; color: var(--ink);
+    letter-spacing: -0.2px; overflow-wrap: break-word;
+  }
+  .dev-role {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.58rem; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--maroon);
+    margin-top: 2px; margin-bottom: 8px;
+  }
+  .dev-stack { display: flex; gap: 5px; flex-wrap: wrap; }
+  .dev-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.54rem; letter-spacing: 0.1em;
+    text-transform: uppercase; padding: 2px 8px;
+    border-radius: 20px; background: var(--bg);
+    border: 1.5px solid var(--line); color: var(--muted);
+    font-weight: 600;
+  }
+  .dev-contact {
+    display: flex; flex-direction: column; gap: 5px;
+    margin-top: 9px;
+  }
+  .dev-contact-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem; letter-spacing: 0.04em;
+    color: var(--muted); text-decoration: none;
+    transition: color 0.15s;
+    overflow-wrap: anywhere;
+  }
+  .dev-contact-link:hover { color: var(--maroon); }
+
   /* ── FOOTER ── */
   footer {
     position: relative; z-index: 2;
@@ -1385,8 +1418,6 @@
 </head>
 <body>
 
-<div class="cursor" id="cursor"></div>
-<div class="cursor-ring" id="cursorRing"></div>
 
 @if(!empty($scheduledAt))
 {{-- ── MAINTENANCE NOTICE BANNER ── --}}
@@ -1449,7 +1480,7 @@
   <div class="orb orb-3"></div>
 
   <div class="hero-content">
-    <div class="hero-eyebrow">Intellectual Property Records System — v2.0</div>
+    <div class="hero-eyebrow">Knowledge Technology & Transfer Management System</div>
 
     <h1 class="hero-title">
       <span class="accent">KTTM</span>
@@ -1568,6 +1599,11 @@
       </div>
     </div>
 
+    <div style="display:flex;align-items:center;gap:8px;margin:4px 0 2px;">
+      <input type="checkbox" id="rememberMe" style="width:15px;height:15px;accent-color:var(--maroon);cursor:pointer;">
+      <label for="rememberMe" style="font-size:0.78rem;color:var(--muted);cursor:pointer;user-select:none;">Remember me</label>
+    </div>
+
     <button class="btn-login" id="loginBtn">
       <span id="loginBtnText">Sign In →</span>
       <span id="loginBtnSpinner" style="display:none;">
@@ -1599,7 +1635,10 @@
   <div class="section-header">
     <span class="section-label">What We Offer</span>
     <h2 class="section-title">System <span class="accent">Services</span></h2>
-    <p class="section-desc">A complete digital infrastructure for intellectual property records — built for accuracy, access, and accountability.</p>
+    <p class="section-desc">
+      A complete digital infrastructure for intellectual property records — built for accuracy, access, and accountability.
+      Features and access depend on the user role: Administrator or Guest User.
+    </p>
   </div>
 
   <div class="services-grid">
@@ -1608,23 +1647,31 @@
       <div class="service-num">01</div>
       <div class="service-icon-wrap">
         <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
         </svg>
       </div>
       <h3 class="service-name">IP Record Management</h3>
-      <p class="service-desc">Create, update, and delete intellectual property filings — patents, trademarks, copyrights — with full audit trails.</p>
-      <span class="service-tag">Admin Only</span>
+      <p class="service-desc">
+        Full management of intellectual property records, including creating, updating, and deleting IP filings with proper audit trails.
+      </p>
+      <span class="service-tag">Admin Access</span>
     </div>
 
     <div class="service-card">
       <div class="service-num">02</div>
       <div class="service-icon-wrap">
         <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
       </div>
       <h3 class="service-name">Search & Browse</h3>
-      <p class="service-desc">Advanced filtering and full-text search across all registered IP records. Available to both admins and guest users for transparency.</p>
+      <p class="service-desc">
+        Search and view registered IP records using filters and keyword search. Available to all users for easier access and transparency.
+      </p>
       <span class="service-tag">All Users</span>
     </div>
 
@@ -1632,35 +1679,45 @@
       <div class="service-num">03</div>
       <div class="service-icon-wrap">
         <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
         </svg>
       </div>
       <h3 class="service-name">Analytics Dashboard</h3>
-      <p class="service-desc">Visual graphs and trend analysis on IP filings — by category, date, status, and ownership. Exclusive to administrators.</p>
-      <span class="service-tag">Admin Only</span>
+      <p class="service-desc">
+        View visual graphs and trend analysis of IP filings by category, date, status, and ownership for monitoring and decision-making.
+      </p>
+      <span class="service-tag">Admin Access</span>
     </div>
 
     <div class="service-card">
       <div class="service-num">04</div>
       <div class="service-icon-wrap">
         <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/>
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <polyline points="9 12 11 14 15 10"/>
         </svg>
       </div>
-      <h3 class="service-name">Access Control</h3>
-      <p class="service-desc">Two-tier access model — Administrator with full CRUD privileges, and Guest with read-only search. No registration needed for guests.</p>
-      <span class="service-tag">System Level</span>
+      <h3 class="service-name">Role-Based Access</h3>
+      <p class="service-desc">
+        Provides administrators with full system control while guest users can only search, browse, and view available IP records.
+      </p>
+      <span class="service-tag">System Feature</span>
     </div>
 
     <div class="service-card">
       <div class="service-num">05</div>
       <div class="service-icon-wrap">
         <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+          <rect x="3" y="11" width="18" height="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0110 0v4"/>
         </svg>
       </div>
       <h3 class="service-name">Secure Digitalization</h3>
-      <p class="service-desc">Migrate physical IP records into a structured, searchable digital format — reducing paper dependency and streamlining office operations.</p>
+      <p class="service-desc">
+        Converts physical IP records into a secure, organized, and searchable digital format to reduce manual work and paper dependency.
+      </p>
       <span class="service-tag">Core Feature</span>
     </div>
 
@@ -1668,17 +1725,19 @@
       <div class="service-num">06</div>
       <div class="service-icon-wrap">
         <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+          <polyline points="16 18 22 12 16 6"/>
+          <polyline points="8 6 2 12 8 18"/>
         </svg>
       </div>
       <h3 class="service-name">Built on Laravel</h3>
-      <p class="service-desc">Powered by Laravel with Blade templating — scalable, maintainable, and designed for the KTTM Office infrastructure.</p>
+      <p class="service-desc">
+        Developed using Laravel and Blade templating to provide a secure, scalable, and maintainable system for KTTM operations.
+      </p>
       <span class="service-tag">Technology</span>
     </div>
 
   </div>
 </section>
-
 <!-- ==================== SECTION 2.5: ABOUT KTTM ==================== -->
 <section id="about">
   <div class="bg-layer" style="opacity:0.28;"></div>
@@ -1943,6 +2002,12 @@
           <div class="faq-toggle">+</div>
         </div>
       </div>
+      <div class="faq-item" data-faq="6">
+        <div class="faq-question" onclick="selectFaq(this, 6)">
+          <span class="faq-q-text">Who made this system?</span>
+          <div class="faq-toggle">+</div>
+        </div>
+      </div>
     </div>
 
     {{-- RIGHT: dynamic panel --}}
@@ -2195,6 +2260,117 @@
           </div>
         </div>
 
+        {{-- Panel 6: The Developers --}}
+        <div class="faq-panel" id="faq-panel-6">
+          <div class="faq-info-card" style="margin-bottom:14px;">
+            <p class="fic-label">Built at BatStateU</p>
+            <h3 class="fic-title">The Team<br>Behind the System.</h3>
+            <p class="fic-desc">This system was designed and developed by BS Information Technology students from Batangas State University as a capstone project for the KTTM Office.</p>
+            <div class="fic-roles">
+              <span class="role-pill admin">Full-Stack</span>
+              <span class="role-pill">Laravel · PostgreSQL</span>
+              <span class="role-pill">BatStateU</span>
+            </div>
+          </div>
+          <div class="dev-cards">
+
+            {{-- ═══════════════════════════════════════════
+                 DEVELOPER 1
+                 ═══════════════════════════════════════════ --}}
+            <div class="dev-card">
+
+              {{-- PHOTO: Replace the <div class="dev-avatar"> below with an <img> tag once you have the photo.
+                   Example:
+                   <img src="{{ asset('images/dev1.jpg') }}" alt="Dev 1"
+                        style="width:48px;height:48px;border-radius:14px;object-fit:cover;flex-shrink:0;box-shadow:0 4px 14px rgba(165,44,48,0.28);">
+                   For now, initials avatar is shown. Replace XX with initials. --}}
+              <div class="dev-avatar">{{-- INITIALS: e.g. JD --}}XX</div>
+
+              <div class="dev-info">
+
+                {{-- FULL NAME --}}
+                <div class="dev-name">Kim Ivan Ebora</div>
+
+                {{-- ROLE TITLE e.g. Lead Developer / Full-Stack Developer --}}
+                <div class="dev-role">Lead Developer & Tester</div>
+
+                {{-- TECH STACK TAGS — add/remove <span> as needed --}}
+                <div class="dev-stack">
+                  <span class="dev-tag">{{-- TODO: Tech 1 --}}</span>
+                  <span class="dev-tag">{{-- TODO: Tech 2 --}}</span>
+                  <span class="dev-tag">{{-- TODO: Tech 3 --}}</span>
+                </div>
+
+                {{-- CONTACT LINKS --}}
+                <div class="dev-contact">
+                  {{-- EMAIL --}}
+                  <a href="mailto:{{-- TODO: email@g.batstate-u.edu.ph --}}" class="dev-contact-link">
+                    <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>
+                    {{-- TODO: email@g.batstate-u.edu.ph --}}
+                  </a>
+                  {{-- LINKEDIN --}}
+                  <a href="https://linkedin.com/in/{{-- TODO: linkedin-handle --}}" target="_blank" class="dev-contact-link">
+                    <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>
+                    {{-- TODO: linkedin-handle --}}
+                  </a>
+                  {{-- GITHUB --}}
+                  <a href="https://github.com/{{-- TODO: github-handle --}}" target="_blank" class="dev-contact-link">
+                    <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
+                    {{-- TODO: github-handle --}}
+                  </a>
+                </div>
+
+              </div>
+            </div>
+
+            {{-- ═══════════════════════════════════════════
+                 DEVELOPER 2
+                 ═══════════════════════════════════════════ --}}
+            <div class="dev-card">
+
+              {{-- PHOTO: Same instructions as Developer 1 above. --}}
+              <div class="dev-avatar" style="background:linear-gradient(135deg,#1a3a5c,#2563EB);">{{-- INITIALS: e.g. MS --}}XX</div>
+
+              <div class="dev-info">
+
+                {{-- FULL NAME --}}
+                <div class="dev-name">Jade Sagario</div>
+
+                {{-- ROLE TITLE --}}
+                <div class="dev-role">Developer & Data Analyst</div>
+
+                {{-- TECH STACK TAGS --}}
+                <div class="dev-stack">
+                  <span class="dev-tag">{{-- TODO: Tech 1 --}}</span>
+                  <span class="dev-tag">{{-- TODO: Tech 2 --}}</span>
+                  <span class="dev-tag">{{-- TODO: Tech 3 --}}</span>
+                </div>
+
+                {{-- CONTACT LINKS --}}
+                <div class="dev-contact">
+                  {{-- EMAIL --}}
+                  <a href="mailto:{{-- TODO: email@g.batstate-u.edu.ph --}}" class="dev-contact-link">
+                    <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>
+                    {{-- TODO: email@g.batstate-u.edu.ph --}}
+                  </a>
+                  {{-- LINKEDIN --}}
+                  <a href="https://linkedin.com/in/{{-- TODO: linkedin-handle --}}" target="_blank" class="dev-contact-link">
+                    <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>
+                   https://www.linkedin.com/in/jade-sagario-2234153b6/
+                  </a>
+                  {{-- GITHUB --}}
+                  <a href="https://github.com/{{-- TODO: github-handle --}}" target="_blank" class="dev-contact-link">
+                    <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
+                    {{-- TODO: github-handle --}}
+                  </a>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -2290,25 +2466,6 @@
 </footer>
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
-  // ── Custom cursor (fine pointer only) ──
-  const cursor = document.getElementById('cursor');
-  const ring   = document.getElementById('cursorRing');
-  let mx = 0, my = 0, rx = 0, ry = 0;
-  if (cursor && ring && window.matchMedia('(pointer: fine)').matches) {
-    document.addEventListener('mousemove', e => {
-      mx = e.clientX; my = e.clientY;
-      cursor.style.left = mx - 5 + 'px';
-      cursor.style.top  = my - 5 + 'px';
-    });
-    (function animRing() {
-      rx += (mx - rx) * 0.13;
-      ry += (my - ry) * 0.13;
-      ring.style.left = rx + 'px';
-      ring.style.top  = ry + 'px';
-      requestAnimationFrame(animRing);
-    })();
-  }
-
   // ── Mobile nav ──
   const mainNav = document.getElementById('mainNav');
   const navToggle = document.getElementById('navMenuToggle');
@@ -2336,7 +2493,20 @@
   // ── Modal ──
   function openModal()  {
     document.getElementById('loginModal').classList.add('open');
-    setTimeout(() => document.getElementById('loginEmail').focus(), 200);
+    setTimeout(() => {
+      // Auto-fill remembered email from cookie
+      const remembered = document.cookie.split('; ').find(r => r.startsWith('kttm_remember_email='));
+      if (remembered) {
+        const savedEmail = decodeURIComponent(remembered.split('=')[1] || '');
+        if (savedEmail) {
+          document.getElementById('loginEmail').value = savedEmail;
+          document.getElementById('rememberMe').checked = true;
+          document.getElementById('loginPassword').focus();
+          return;
+        }
+      }
+      document.getElementById('loginEmail').focus();
+    }, 200);
   }
   function closeModal() { document.getElementById('loginModal').classList.remove('open'); }
   document.getElementById('openLogin').addEventListener('click',  e => { e.preventDefault(); openModal(); });
@@ -2364,13 +2534,14 @@
 
   // ── Real Login via AJAX ──
   async function doLogin() {
-    const email    = document.getElementById('loginEmail').value.trim();
-    const password = document.getElementById('loginPassword').value;
-    const btn      = document.getElementById('loginBtn');
-    const btnText  = document.getElementById('loginBtnText');
-    const spinner  = document.getElementById('loginBtnSpinner');
-    const alertEl  = document.getElementById('loginAlertJs');
-    const alertTxt = document.getElementById('loginAlertText');
+    const email      = document.getElementById('loginEmail').value.trim();
+    const password   = document.getElementById('loginPassword').value;
+    const rememberMe = document.getElementById('rememberMe')?.checked ?? false;
+    const btn        = document.getElementById('loginBtn');
+    const btnText    = document.getElementById('loginBtnText');
+    const spinner    = document.getElementById('loginBtnSpinner');
+    const alertEl    = document.getElementById('loginAlertJs');
+    const alertTxt   = document.getElementById('loginAlertText');
 
     if (!email || !password) {
       alertTxt.textContent = 'Please enter your email and password.';
@@ -2393,7 +2564,7 @@
           'Accept':       'application/json',
           'X-CSRF-TOKEN': '{{ csrf_token() }}',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, remember_me: rememberMe }),
       });
 
       const data = await resp.json();
