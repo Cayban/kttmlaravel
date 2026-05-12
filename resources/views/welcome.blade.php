@@ -1074,7 +1074,22 @@
     display: flex; flex-direction: column; gap: 5px;
     margin-top: 9px;
   }
-  .dev-contact-link {
+  .dev-photo-wrap {
+    position: relative; width: 72px; height: 72px;
+    flex-shrink: 0; border-radius: 16px; overflow: hidden;
+    box-shadow: 0 4px 14px rgba(165,44,48,0.28);
+    cursor: pointer;
+  }
+  .dev-photo {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover; border-radius: 16px;
+    transition: opacity .35s ease, transform .35s ease;
+  }
+  .dev-photo-default { opacity: 1; transform: scale(1); }
+  .dev-photo-hover   { opacity: 0; transform: scale(1.06); }
+  .dev-photo-wrap:hover .dev-photo-default { opacity: 0; transform: scale(1.06); }
+  .dev-photo-wrap:hover .dev-photo-hover   { opacity: 1; transform: scale(1); }
     display: inline-flex; align-items: center; gap: 6px;
     font-family: 'DM Mono', monospace;
     font-size: 0.6rem; letter-spacing: 0.04em;
@@ -1480,7 +1495,7 @@
   <div class="orb orb-3"></div>
 
   <div class="hero-content">
-    <div class="hero-eyebrow">Knowledge Technology & Transfer Management System</div>
+    <div class="hero-eyebrow">Knowledge & Technology Transfer Management System</div>
 
     <h1 class="hero-title">
       <span class="accent">KTTM</span>
@@ -2275,96 +2290,68 @@
           <div class="dev-cards">
 
             {{-- ═══════════════════════════════════════════
-                 DEVELOPER 1
+                 DEVELOPER 1 — Kim Ivan Ebora
                  ═══════════════════════════════════════════ --}}
             <div class="dev-card">
-
-              {{-- PHOTO: Replace the <div class="dev-avatar"> below with an <img> tag once you have the photo.
-                   Example:
-                   <img src="{{ asset('images/dev1.jpg') }}" alt="Dev 1"
-                        style="width:48px;height:48px;border-radius:14px;object-fit:cover;flex-shrink:0;box-shadow:0 4px 14px rgba(165,44,48,0.28);">
-                   For now, initials avatar is shown. Replace XX with initials. --}}
-              <div class="dev-avatar">{{-- INITIALS: e.g. JD --}}XX</div>
-
+              <div class="dev-photo-wrap">
+                <img src="{{ asset('images/KimEboraPortfolio .jpg') }}" alt="Kim Ivan Ebora" class="dev-photo dev-photo-default">
+                <img src="{{ asset('images/KimEboraShades.png') }}" alt="Kim Ivan Ebora" class="dev-photo dev-photo-hover">
+              </div>
               <div class="dev-info">
-
-                {{-- FULL NAME --}}
                 <div class="dev-name">Kim Ivan Ebora</div>
-
-                {{-- ROLE TITLE e.g. Lead Developer / Full-Stack Developer --}}
-                <div class="dev-role">Lead Developer & Tester</div>
-
-                {{-- TECH STACK TAGS — add/remove <span> as needed --}}
+                <div class="dev-role">Lead Developer &amp; Tester</div>
                 <div class="dev-stack">
-                  <span class="dev-tag">{{-- TODO: Tech 1 --}}</span>
-                  <span class="dev-tag">{{-- TODO: Tech 2 --}}</span>
-                  <span class="dev-tag">{{-- TODO: Tech 3 --}}</span>
+                  <span class="dev-tag">Laravel</span>
+                  <span class="dev-tag">PHP</span>
+                  <span class="dev-tag">Blade</span>
                 </div>
-
-                {{-- CONTACT LINKS --}}
                 <div class="dev-contact">
-                  {{-- EMAIL --}}
-                  <a href="mailto:{{-- TODO: email@g.batstate-u.edu.ph --}}" class="dev-contact-link">
+                  <a href="mailto:kimiebora@gmail.com" class="dev-contact-link">
                     <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>
-                    {{-- TODO: email@g.batstate-u.edu.ph --}}
+                    Gmail
                   </a>
-                  {{-- LINKEDIN --}}
-                  <a href="https://linkedin.com/in/{{-- TODO: linkedin-handle --}}" target="_blank" class="dev-contact-link">
+                  <a href="https://www.linkedin.com/in/kim-ivan-ebora-a44014405" target="_blank" class="dev-contact-link">
                     <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>
-                    {{-- TODO: linkedin-handle --}}
+                    LinkedIn
                   </a>
-                  {{-- GITHUB --}}
-                  <a href="https://github.com/{{-- TODO: github-handle --}}" target="_blank" class="dev-contact-link">
+                  <a href="https://github.com/Cayban" target="_blank" class="dev-contact-link">
                     <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
-                    {{-- TODO: github-handle --}}
+                    GitHub Repository
                   </a>
                 </div>
-
               </div>
             </div>
 
             {{-- ═══════════════════════════════════════════
-                 DEVELOPER 2
+                 DEVELOPER 2 — Jade Sagario
                  ═══════════════════════════════════════════ --}}
             <div class="dev-card">
-
-              {{-- PHOTO: Same instructions as Developer 1 above. --}}
-              <div class="dev-avatar" style="background:linear-gradient(135deg,#1a3a5c,#2563EB);">{{-- INITIALS: e.g. MS --}}XX</div>
-
+              <div class="dev-photo-wrap">
+                <img src="{{ asset('images/JadeSagarioPortfolio.jpg') }}" alt="Jade Sagario" class="dev-photo dev-photo-default">
+                <img src="{{ asset('images/JadeSagarioShades.png') }}" alt="Jade Sagario" class="dev-photo dev-photo-hover">
+              </div>
               <div class="dev-info">
-
-                {{-- FULL NAME --}}
                 <div class="dev-name">Jade Sagario</div>
-
-                {{-- ROLE TITLE --}}
-                <div class="dev-role">Developer & Data Analyst</div>
-
-                {{-- TECH STACK TAGS --}}
+                <div class="dev-role">Developer &amp; Data Analyst</div>
                 <div class="dev-stack">
-                  <span class="dev-tag">{{-- TODO: Tech 1 --}}</span>
-                  <span class="dev-tag">{{-- TODO: Tech 2 --}}</span>
-                  <span class="dev-tag">{{-- TODO: Tech 3 --}}</span>
+                  <span class="dev-tag">Laravel</span>
+                  <span class="dev-tag">PHP</span>
+                  <span class="dev-tag">Blade</span>
                 </div>
-
-                {{-- CONTACT LINKS --}}
                 <div class="dev-contact">
-                  {{-- EMAIL --}}
-                  <a href="mailto:{{-- TODO: email@g.batstate-u.edu.ph --}}" class="dev-contact-link">
+                  <a href="mailto:jadesagario31@gmail.com" class="dev-contact-link">
                     <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>
-                    {{-- TODO: email@g.batstate-u.edu.ph --}}
+                    Gmail
                   </a>
-                  {{-- LINKEDIN --}}
-                  <a href="https://linkedin.com/in/{{-- TODO: linkedin-handle --}}" target="_blank" class="dev-contact-link">
+                  <a href="https://www.linkedin.com/in/jade-sagario-2234153b6/" target="_blank" class="dev-contact-link">
                     <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>
-                   https://www.linkedin.com/in/jade-sagario-2234153b6/
+                    LinkedIn
                   </a>
-                  {{-- GITHUB --}}
-                  <a href="https://github.com/{{-- TODO: github-handle --}}" target="_blank" class="dev-contact-link">
+                  <a href="https://github.com/jadesagario31-max" target="_blank" class="dev-contact-link">
                     <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
-                    {{-- TODO: github-handle --}}
+                    GitHub Repository
                   </a>
                 </div>
-
               </div>
             </div>
 
