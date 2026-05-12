@@ -1071,8 +1071,10 @@
     font-weight: 600;
   }
   .dev-contact {
-    display: flex; flex-direction: column; gap: 5px;
-    margin-top: 9px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+    gap: 6px;
+    margin-top: 12px;
   }
   .dev-photo-wrap {
     position: relative; width: 72px; height: 72px;
@@ -1090,14 +1092,66 @@
   .dev-photo-hover   { opacity: 0; transform: scale(1.06); }
   .dev-photo-wrap:hover .dev-photo-default { opacity: 0; transform: scale(1.06); }
   .dev-photo-wrap:hover .dev-photo-hover   { opacity: 1; transform: scale(1); }
+  .dev-contact-link {
+    position: relative;
     display: inline-flex; align-items: center; gap: 6px;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0.42rem 0.55rem;
+    border: 1.5px solid rgba(15,23,42,0.08);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.72);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.7) inset;
     font-family: 'DM Mono', monospace;
-    font-size: 0.6rem; letter-spacing: 0.04em;
-    color: var(--muted); text-decoration: none;
-    transition: color 0.15s;
-    overflow-wrap: anywhere;
+    font-size: 0.5rem; letter-spacing: 0.025em;
+    line-height: 1.15;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    transition: background 0.18s, border-color 0.18s, color 0.18s, transform 0.18s, box-shadow 0.18s;
+    text-align: center;
+    overflow-wrap: normal;
+    word-break: normal;
   }
-  .dev-contact-link:hover { color: var(--maroon); }
+  .dev-contact-link svg {
+    width: 11px;
+    height: 11px;
+    flex-shrink: 0;
+  }
+  .dev-contact-link::after {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-top: 1.5px solid currentColor;
+    border-right: 1.5px solid currentColor;
+    transform: translateY(-1px) rotate(45deg);
+    opacity: 0.45;
+    transition: transform 0.18s, opacity 0.18s;
+  }
+  .dev-contact-link[href^="mailto:"]::after {
+    display: none;
+  }
+  .dev-contact-link:hover,
+  .dev-contact-link:focus-visible {
+    color: var(--maroon);
+    border-color: rgba(165,44,48,0.28);
+    background: linear-gradient(135deg, rgba(165,44,48,0.08), rgba(240,200,96,0.12));
+    box-shadow: 0 8px 18px rgba(165,44,48,0.10);
+    transform: translateY(-1px);
+    outline: none;
+  }
+  .dev-contact-link:hover::after,
+  .dev-contact-link:focus-visible::after {
+    opacity: 0.85;
+    transform: translate(2px, -3px) rotate(45deg);
+  }
+
+  @media (max-width: 640px) {
+    .dev-card { align-items: flex-start; }
+    .dev-contact { grid-template-columns: 1fr; }
+    .dev-contact-link { justify-content: flex-start; }
+  }
 
   /* ── FOOTER ── */
   footer {
@@ -2306,17 +2360,17 @@
                   <span class="dev-tag">Blade</span>
                 </div>
                 <div class="dev-contact">
-                  <a href="mailto:kimiebora@gmail.com" class="dev-contact-link">
+                  <a href="mailto:kimiebora@gmail.com" class="dev-contact-link" aria-label="Email Kim Ivan Ebora">
                     <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>
-                    Gmail
+                    Email
                   </a>
-                  <a href="https://www.linkedin.com/in/kim-ivan-ebora-a44014405" target="_blank" class="dev-contact-link">
+                  <a href="https://www.linkedin.com/in/kim-ivan-ebora-a44014405" target="_blank" rel="noopener noreferrer" class="dev-contact-link" aria-label="Open Kim Ivan Ebora on LinkedIn">
                     <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>
                     LinkedIn
                   </a>
-                  <a href="https://github.com/Cayban" target="_blank" class="dev-contact-link">
+                  <a href="https://github.com/Cayban" target="_blank" rel="noopener noreferrer" class="dev-contact-link" aria-label="Open Kim Ivan Ebora on GitHub">
                     <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
-                    GitHub Repository
+                    GitHub
                   </a>
                 </div>
               </div>
@@ -2339,17 +2393,17 @@
                   <span class="dev-tag">Blade</span>
                 </div>
                 <div class="dev-contact">
-                  <a href="mailto:jadesagario31@gmail.com" class="dev-contact-link">
+                  <a href="mailto:jadesagario31@gmail.com" class="dev-contact-link" aria-label="Email Jade Sagario">
                     <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>
-                    Gmail
+                    Email
                   </a>
-                  <a href="https://www.linkedin.com/in/jade-sagario-2234153b6/" target="_blank" class="dev-contact-link">
+                  <a href="https://www.linkedin.com/in/jade-sagario-2234153b6/" target="_blank" rel="noopener noreferrer" class="dev-contact-link" aria-label="Open Jade Sagario on LinkedIn">
                     <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>
                     LinkedIn
                   </a>
-                  <a href="https://github.com/jadesagario31-max" target="_blank" class="dev-contact-link">
+                  <a href="https://github.com/jadesagario31-max" target="_blank" rel="noopener noreferrer" class="dev-contact-link" aria-label="Open Jade Sagario on GitHub">
                     <svg width="11" height="11" fill="currentColor" viewBox="0 0 24 24"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
-                    GitHub Repository
+                    GitHub
                   </a>
                 </div>
               </div>
