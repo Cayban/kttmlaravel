@@ -1031,6 +1031,7 @@
             <div>
               <div class="table-card-title">All IP Records</div>
               <div class="table-card-sub">Filtered client-side · fast search</div>
+              <div id="recordCountLine" style="margin-top:4px;font-size:0.75rem;color:var(--muted);"></div>
             </div>
           </div>
           <div class="table-card-body">
@@ -1426,6 +1427,19 @@
         document.getElementById('prevPageBtn').disabled = currentPage <= 1;
         document.getElementById('nextPageBtn').disabled = currentPage >= lastPage;
         if(resultHint) resultHint.textContent = items.length ? `Showing ${items.length} of ${data.total||'?'} record(s).` : 'No results.';
+        const countLine = document.getElementById('recordCountLine');
+        if (countLine) {
+          const total    = data.total || 0;
+          const shown    = items.length;
+          const isFilter = (q?.value.trim() || campus?.value || type?.value || status?.value || college?.value || program?.value);
+          if (!shown) {
+            countLine.innerHTML = `<span style="color:#ef4444;">No records match the current filters.</span>`;
+          } else if (isFilter) {
+            countLine.innerHTML = `<strong style="color:var(--ink);">${shown.toLocaleString()}</strong> record${shown!==1?'s':''} shown after filter &nbsp;·&nbsp; <span>${total.toLocaleString()} total</span>`;
+          } else {
+            countLine.innerHTML = `<strong style="color:var(--ink);">${total.toLocaleString()}</strong> record${total!==1?'s':''} total`;
+          }
+        }
       } catch(e){ console.error(e); }
     }
 

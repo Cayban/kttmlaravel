@@ -88,6 +88,18 @@ $maintenanceGuard = function (\Illuminate\Http\Request $request) {
 };
 
 /* ─────────────────────────────────────────────────────
+   AUTH GUARD
+   Redirects unauthenticated users to the login page.
+   Apply to every protected route with: use ($authGuard)
+───────────────────────────────────────────────────── */
+$authGuard = function (\Illuminate\Http\Request $request) {
+    if (!$request->session()->has('user_id')) {
+        return redirect('/')->with('error', 'Please log in to access that page.');
+    }
+    return null;
+};
+
+/* ─────────────────────────────────────────────────────
    PRESENCE TRACKER HELPER
    Upserts a row in active_sessions for every tracked
    page hit. Developers are never recorded.
@@ -1756,7 +1768,10 @@ Route::get('/', function (Request $request) {
  */
 Route::get('/home', function (
     \Illuminate\Http\Request $request
-) use ($maintenanceGuard, $trackPresence) {
+) use ($maintenanceGuard, $trackPresence, $authGuard) {
+
+    // Auth check — redirect to login if not signed in
+    if ($redir = $authGuard($request)) return $redir;
 
     // Maintenance / debug mode block
     if ($redir = $maintenanceGuard($request)) return $redir;
@@ -1973,7 +1988,9 @@ Route::get('/ip-records', function () {
 /**
  * ✅ STAFF-ONLY RECORDS ROUTE
  */
-Route::get('/records', function () {
+Route::get('/records', function (\Illuminate\Http\Request $request) use ($authGuard) {
+    if ($redir = $authGuard($request)) return $redir;
+
     $perPage = 100;
     $recordsPage = IpRecord::orderByRaw("CAST(SUBSTRING(record_id FROM '[0-9]+$') AS INTEGER) ASC")
         ->limit($perPage)
@@ -2194,7 +2211,8 @@ Route::get('/api/records', function (Request $request) {
 /**
  * ✅ NEW RECORD FORM PAGE
  */
-Route::get('/ipassets/create', function () {
+Route::get('/ipassets/create', function (\Illuminate\Http\Request $request) use ($authGuard) {
+    if ($redir = $authGuard($request)) return $redir;
 
     $allRecords = IpRecord::orderByDesc('date_registered_deposited')
         ->get()
@@ -2806,7 +2824,9 @@ Route::get('/guest/records', function () use ($trackPresence) {
     return view('guestrecords', compact('user', 'allRecords', 'campuses', 'types', 'statuses', 'colleges', 'programs', 'recent'));
 })->name('guest.records');
 
-Route::get('/insights', function () {
+Route::get('/insights', function (\Illuminate\Http\Request $request) use ($authGuard) {
+    if ($redir = $authGuard($request)) return $redir;
+
     $allRecords = IpRecord::orderByDesc('date_registered_deposited')
         ->get()
         ->map(function ($r) {
