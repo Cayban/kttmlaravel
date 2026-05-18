@@ -827,6 +827,95 @@
     .btn-confirm:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(59,130,246,.38); }
     .btn-confirm:disabled { opacity: .6; cursor: not-allowed; transform: none; }
 
+    /* ITSO password modal */
+    .acct-modal-box {
+      padding: 0; overflow: hidden;
+      width: min(460px, calc(100vw - 2rem));
+      border-color: rgba(59,130,246,.24);
+      box-shadow: 0 32px 80px rgba(0,0,0,.58), 0 0 60px rgba(59,130,246,.12);
+    }
+    .acct-modal-head {
+      position: relative; overflow: hidden;
+      padding: 20px 22px;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+      background:
+        radial-gradient(circle at 88% 8%, rgba(147,197,253,.38), transparent 30%),
+        linear-gradient(135deg, #16345d 0%, #1d4ed8 62%, #2563eb 100%);
+      border-bottom: 1px solid rgba(147,197,253,.2);
+    }
+    .acct-modal-head::after {
+      content: ""; position: absolute; inset: auto -28px -48px auto;
+      width: 150px; height: 150px; border-radius: 999px;
+      background: rgba(255,255,255,.08); pointer-events: none;
+    }
+    .acct-title-wrap { display: flex; align-items: center; gap: 12px; min-width: 0; position: relative; z-index: 1; }
+    .acct-modal-icon {
+      width: 42px; height: 42px; border-radius: 13px;
+      display: flex; align-items: center; justify-content: center; flex: 0 0 auto;
+      background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.2);
+      color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.16);
+    }
+    .modal-eyebrow {
+      font-family: 'DM Mono', monospace; font-size: 0.62rem; font-weight: 800;
+      letter-spacing: .14em; text-transform: uppercase; color: #bfdbfe; margin-bottom: 3px;
+    }
+    .acct-modal-head .modal-title {
+      color: #fff; margin: 0; font-size: clamp(1rem, 0.45vw + 0.92rem, 1.15rem);
+      line-height: 1.2; overflow-wrap: anywhere;
+    }
+    .modal-close {
+      position: relative; z-index: 1; width: 34px; height: 34px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.18); background: rgba(15,23,42,.2);
+      color: #fff; font-family: inherit; font-size: 1rem; line-height: 1;
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all .18s;
+    }
+    .modal-close:hover { background: rgba(255,255,255,.18); transform: translateY(-1px); }
+    .acct-modal-body { padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+    .acct-field label {
+      font-family: 'DM Mono', monospace; font-size: 0.62rem; font-weight: 800;
+      letter-spacing: .12em; text-transform: uppercase; color: var(--muted2);
+      display: block; margin-bottom: 7px;
+    }
+    .modal-input {
+      width: 100%; box-sizing: border-box;
+      padding: 12px 13px; border-radius: 12px;
+      border: 1px solid var(--line2); background: var(--bg2);
+      color: var(--ink); font-family: inherit; font-size: 0.86rem;
+      outline: none; transition: border-color .18s, box-shadow .18s, background .18s;
+    }
+    .modal-input::placeholder { color: var(--muted); }
+    .modal-input:focus {
+      border-color: var(--blue);
+      background: rgba(15,23,42,.82);
+      box-shadow: 0 0 0 3px var(--blue-dim);
+    }
+    .acct-modal-alert {
+      display: none; border-radius: 11px; padding: 10px 12px;
+      background: var(--red-dim); border: 1px solid rgba(239,68,68,.24);
+      color: #fca5a5; font-size: 0.76rem; font-weight: 700; line-height: 1.45;
+    }
+    .acct-modal-footer {
+      padding: 16px 22px 22px; display: flex; justify-content: flex-end; gap: 10px;
+      border-top: 1px solid var(--line); flex-wrap: wrap;
+    }
+    .btn-modal-cancel,
+    .btn-modal-confirm {
+      min-height: 40px; border-radius: 11px; padding: 0 16px;
+      font-family: inherit; font-size: 0.78rem; font-weight: 800;
+      cursor: pointer; transition: all .18s; box-sizing: border-box;
+    }
+    .btn-modal-cancel {
+      background: var(--bg2); border: 1px solid var(--line2); color: var(--muted2);
+    }
+    .btn-modal-cancel:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-dim); }
+    .btn-modal-confirm {
+      background: linear-gradient(135deg, var(--blue2), var(--blue)); border: none; color: #fff;
+      box-shadow: 0 8px 18px rgba(59,130,246,.32);
+    }
+    .btn-modal-confirm:hover { transform: translateY(-1px); box-shadow: 0 12px 24px rgba(59,130,246,.4); }
+    .btn-modal-confirm:disabled { opacity: .62; cursor: not-allowed; transform: none; box-shadow: none; }
+
     /* history modal */
     .history-box {
       background: var(--card); border: 1px solid var(--line2);
@@ -1033,6 +1122,7 @@
       .ctrl-modal-box { width: 96vw; padding: 22px 20px; }
       .imp-modal-box  { width: 96vw; padding: 22px 20px; }
       .modal-box      { width: 96vw; padding: 22px 20px; }
+      .acct-modal-box { padding: 0; }
       .logout-box     { width: 96vw; padding: 22px 20px; }
       .history-box    { width: 96vw; max-width: none; }
 
@@ -1100,6 +1190,11 @@
       .ctrl-modal-box { padding: 18px 16px; }
       .imp-modal-box  { padding: 18px 16px; }
       .modal-box      { padding: 18px 16px; }
+      .acct-modal-box { padding: 0; }
+      .acct-modal-head { padding: 18px 16px; }
+      .acct-modal-body { padding: 18px 16px; }
+      .acct-modal-footer { padding: 14px 16px 18px; flex-direction: column-reverse; }
+      .btn-modal-cancel, .btn-modal-confirm { width: 100%; }
       .logout-box     { padding: 18px 16px; }
       .history-head   { padding: 16px 18px; }
       .history-body   { padding: 14px 18px; }
@@ -1365,6 +1460,35 @@
       <div class="dev-left">
 
         {{-- ACCESS CONTROL --}}
+        {{-- Account Credentials Card --}}
+        <div class="sec fade-up d1" style="margin-bottom:20px;">
+          <div class="sec-head" style="margin-bottom:12px;">
+            <div class="sec-head-l">
+              <div class="sec-ico" style="background:#eff6ff;color:#2563eb;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+              </div>
+              <div>
+                <div class="sec-title">ITSO Account Credentials</div>
+                <div class="sec-sub">Login email &amp; password for the ITSO account</div>
+              </div>
+            </div>
+          </div>
+          <div style="background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <div>
+              <div style="font-size:0.65rem;font-weight:700;letter-spacing:.07em;color:var(--muted);text-transform:uppercase;margin-bottom:3px;">Login Email</div>
+              <div style="font-size:0.88rem;font-weight:700;color:var(--ink);">{{ $account->email ?? '—' }}</div>
+              @if(!empty($account?->updated_at))
+              <div style="font-size:0.68rem;color:var(--muted);margin-top:2px;">Password last changed {{ \Carbon\Carbon::parse($account->updated_at)->diffForHumans() }}</div>
+              @endif
+            </div>
+            <button class="u-btn u-btn-reset" onclick="openAcctPwModal()">
+              <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+              Change ITSO Password
+            </button>
+          </div>
+        </div>
+
+        {{-- Access Control --}}
         <div class="sec fade-up d2" id="access">
           <div class="sec-head">
             <div class="sec-head-l">
@@ -1698,6 +1822,47 @@
 </div>{{-- end main-wrap --}}
 
 {{-- ══════════════ RESET PASSWORD MODAL ══════════════ --}}
+<div class="modal-overlay" id="acctPwModal">
+  <div class="modal-box acct-modal-box">
+    <div class="acct-modal-head">
+      <div class="acct-title-wrap">
+        <div class="acct-modal-icon">
+          <svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <rect x="3" y="11" width="18" height="10" rx="2"></rect>
+            <path d="M7 11V7a5 5 0 0110 0v4"></path>
+          </svg>
+        </div>
+        <div>
+          <div class="modal-eyebrow">Account Security</div>
+          <div class="modal-title">Change ITSO Password</div>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeAcctPwModal()" aria-label="Close">&times;</button>
+    </div>
+    <div class="acct-modal-body">
+      <div id="acctPwAlert" class="acct-modal-alert"></div>
+      <div class="acct-field">
+        <label for="acctCurrentPw">Current Password</label>
+        <input type="password" id="acctCurrentPw" class="modal-input" placeholder="Enter current password" autocomplete="current-password">
+      </div>
+      <div class="acct-field">
+        <label for="acctNewPw">New Password</label>
+        <input type="password" id="acctNewPw" class="modal-input" placeholder="Min. 8 characters" autocomplete="new-password">
+      </div>
+      <div class="acct-field">
+        <label for="acctConfirmPw">Confirm New Password</label>
+        <input type="password" id="acctConfirmPw" class="modal-input" placeholder="Repeat new password" autocomplete="new-password">
+      </div>
+    </div>
+    <div class="acct-modal-footer">
+      <button class="btn-modal-cancel" onclick="closeAcctPwModal()">Cancel</button>
+      <button class="btn-modal-confirm" id="acctPwSaveBtn" onclick="saveAcctPassword()">
+        <span id="acctPwBtnText">Update Password</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="resetModal">
   <div class="modal-box">
     <div class="modal-title">Reset Password</div>
@@ -2216,6 +2381,58 @@
   }
   function ucfirst(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  /* ── Account Password ── */
+  function openAcctPwModal() {
+    document.getElementById('acctCurrentPw').value = '';
+    document.getElementById('acctNewPw').value     = '';
+    document.getElementById('acctConfirmPw').value  = '';
+    document.getElementById('acctPwAlert').style.display = 'none';
+    document.getElementById('acctPwBtnText').textContent = 'Update Password';
+    document.getElementById('acctPwSaveBtn').disabled = false;
+    document.getElementById('acctPwModal').classList.add('open');
+  }
+  function closeAcctPwModal() {
+    document.getElementById('acctPwModal').classList.remove('open');
+  }
+  document.getElementById('acctPwModal')?.addEventListener('click', e => {
+    if (e.target.id === 'acctPwModal') closeAcctPwModal();
+  });
+  async function saveAcctPassword() {
+    const currentPw = document.getElementById('acctCurrentPw').value;
+    const newPw     = document.getElementById('acctNewPw').value;
+    const confirmPw = document.getElementById('acctConfirmPw').value;
+    const alertEl   = document.getElementById('acctPwAlert');
+    const btn       = document.getElementById('acctPwSaveBtn');
+    const btnText   = document.getElementById('acctPwBtnText');
+    const showErr   = msg => { alertEl.textContent = msg; alertEl.style.display = ''; };
+
+    alertEl.style.display = 'none';
+    if (!currentPw)          return showErr('Please enter the current ITSO account password.');
+    if (!newPw)              return showErr('Please enter a new password.');
+    if (newPw.length < 8)    return showErr('New password must be at least 8 characters.');
+    if (newPw !== confirmPw) return showErr('New passwords do not match.');
+
+    btn.disabled = true; btnText.textContent = 'Saving…';
+    try {
+      const resp = await fetch('/dev/account/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '' },
+        body: JSON.stringify({ current_password: currentPw, new_password: newPw }),
+      });
+      const data = await resp.json();
+      if (data.success) {
+        closeAcctPwModal();
+        showToast(data.message || 'ITSO account password updated successfully.');
+      } else {
+        showErr(data.message || 'Failed to update password.');
+        btn.disabled = false; btnText.textContent = 'Update Password';
+      }
+    } catch {
+      showErr('Network error — please try again.');
+      btn.disabled = false; btnText.textContent = 'Update Password';
+    }
   }
 
   /* ── Reset Password ── */

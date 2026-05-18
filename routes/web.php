@@ -800,7 +800,9 @@ $devGuard = function (\Illuminate\Http\Request $request) {
 /* ─────────────────────────────────────────────────────
    DEV HOME / DASHBOARD
 ───────────────────────────────────────────────────── */
-Route::get('/dev', function (\Illuminate\Http\Request $request) use ($devGuard) {
+$itsoAccountEmail = 'itso@g.batstate-u.edu.ph';
+
+Route::get('/dev', function (\Illuminate\Http\Request $request) use ($devGuard, $itsoAccountEmail) {
     if ($redir = $devGuard($request)) return $redir;
 
     // ── System health: all users with last login ───
@@ -897,7 +899,12 @@ Route::get('/dev', function (\Illuminate\Http\Request $request) use ($devGuard) 
         \Log::info('maintenance_logs table not ready: ' . $e->getMessage());
     }
 
-    return view('dev_home', compact('user', 'users', 'kpis', 'recentActivity', 'storageMB', 'storageFiles', 'systemFlags', 'maintenanceLogs'));
+    // Fetch the ITSO account login credentials managed from the dev dashboard.
+    $account = DB::table('accounts')
+        ->whereRaw('LOWER(email) = ?', [Str::lower($itsoAccountEmail)])
+        ->first(['id','email','updated_at']);
+
+    return view('dev_home', compact('user', 'users', 'kpis', 'recentActivity', 'storageMB', 'storageFiles', 'systemFlags', 'maintenanceLogs', 'account'));
 })->name('dev.home');
 
 /* ─────────────────────────────────────────────────────
@@ -984,6 +991,43 @@ Route::post('/dev/users/{id}/reset-password', function (\Illuminate\Http\Request
     ]);
 
     return response()->json(['success' => true, 'message' => 'Password reset successfully.']);
+});
+
+/* ─────────────────────────────────────────────────────
+   DEV API: CHANGE ACCOUNT PASSWORD (login credentials)
+───────────────────────────────────────────────────── */
+Route::post('/dev/account/change-password', function (\Illuminate\Http\Request $request) use ($itsoAccountEmail) {
+    if ($request->session()->get('user_role') !== 'developer') {
+        return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
+    }
+
+    $data = $request->validate([
+        'current_password' => 'required|string',
+        'new_password'     => 'required|string|min:8',
+    ]);
+
+    $account = DB::table('accounts')
+        ->whereRaw('LOWER(email) = ?', [Str::lower($itsoAccountEmail)])
+        ->first();
+
+    if (!$account) {
+        return response()->json(['success' => false, 'message' => 'ITSO account not found.'], 404);
+    }
+
+    if (!password_verify($data['current_password'], $account->password)) {
+        return response()->json(['success' => false, 'message' => 'Current password is incorrect.'], 422);
+    }
+
+    if ($data['current_password'] === $data['new_password']) {
+        return response()->json(['success' => false, 'message' => 'New password must differ from current password.'], 422);
+    }
+
+    DB::table('accounts')->where('id', $account->id)->update([
+        'password'   => password_hash($data['new_password'], PASSWORD_BCRYPT),
+        'updated_at' => now(),
+    ]);
+
+    return response()->json(['success' => true, 'message' => 'ITSO account password updated successfully.']);
 });
 
 /* ─────────────────────────────────────────────────────
