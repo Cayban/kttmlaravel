@@ -1868,7 +1868,7 @@
       <div class="service-num">05</div>
       <div class="service-icon-wrap">
         <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7H14a3.5 3.5 0 010 7H6"/>
+          <text x="12" y="17" text-anchor="middle" fill="currentColor" stroke="none" font-size="19" font-weight="700" font-family="Arial, sans-serif">₱</text>
         </svg>
       </div>
       <h3 class="service-name">Process Claims</h3>
