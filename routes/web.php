@@ -1582,11 +1582,13 @@ Route::get('/calendar', function () {
     $allRecords = IpRecord::orderByDesc('date_registered_deposited')
         ->get()
         ->map(fn($r) => [
-            'id'         => $r->record_id,
-            'title'      => $r->ip_title,
-            'type'       => $r->category,
-            'status'     => $r->status,
-            'registered' => $r->date_registered_deposited,
+            'id'             => $r->record_id,
+            'title'          => $r->ip_title,
+            'type'           => $r->category,
+            'status'         => $r->status,
+            'registered'     => $r->date_registered_deposited,
+            'date_creation'  => $r->date_creation,
+            'date_of_filing' => $r->date_of_filing,
         ])
         ->toArray();
 
@@ -1861,16 +1863,18 @@ Route::get('/home', function (
         ->get()
         ->map(function ($r) {
             return [
-                'id'         => $r->record_id,
-                'title'      => $r->ip_title,
-                'type'       => $r->category,
-                'owner'      => $r->owner_inventor,
-                'campus'     => $r->campus,
-                'status'     => $r->status,
-                'registered' => $r->date_registered_deposited,
-                'registration_number'  => $r->registration_number,
-                'gdrive_link'=> $r->gdrive_link,
-                'remarks'    => $r->remarks,
+                'id'                  => $r->record_id,
+                'title'               => $r->ip_title,
+                'type'                => $r->category,
+                'owner'               => $r->owner_inventor,
+                'campus'              => $r->campus,
+                'status'              => $r->status,
+                'registered'          => $r->date_registered_deposited,
+                'date_creation'       => $r->date_creation,
+                'date_of_filing'      => $r->date_of_filing,
+                'registration_number' => $r->registration_number,
+                'gdrive_link'         => $r->gdrive_link,
+                'remarks'             => $r->remarks,
             ];
         })
         ->toArray();
@@ -2529,6 +2533,9 @@ Route::post('/records/{id}/update', function (Request $request, $id) {
     }
 
     $changes = [];
+    $normalizeOwnerForCompare = function ($value) {
+        return Str::lower(preg_replace('/[^a-z0-9]+/i', '', (string) $value));
+    };
 
     if ($request->has('title')) {
         $old = $record->ip_title; $new = $request->input('title');
@@ -2542,8 +2549,10 @@ Route::post('/records/{id}/update', function (Request $request, $id) {
     }
     if ($request->has('owner')) {
         $old = $record->owner_inventor; $new = $request->input('owner');
-        if ($old !== $new) $changes['Owner'] = ['old' => $old, 'new' => $new];
-        $record->owner_inventor = $new;
+        if ($normalizeOwnerForCompare($old) !== $normalizeOwnerForCompare($new)) {
+            $changes['Owner'] = ['old' => $old, 'new' => $new];
+            $record->owner_inventor = $new;
+        }
     }
     if ($request->has('campus')) {
         $old = $record->campus; $new = $request->input('campus');

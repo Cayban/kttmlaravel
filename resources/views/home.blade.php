@@ -1916,6 +1916,50 @@
   $todayPending   = collect($todayTasks)->where('status', 'pending')->count();
   $todayDone      = collect($todayTasks)->where('status', 'done')->count();
   $todayTotal     = count($todayTasks);
+  $expiryStatuses = ['registered', 'close to expiry', 'close to expiration'];
+  $hasExpiryStatus = fn($r) => in_array(strtolower(trim($r['status'] ?? '')), $expiryStatuses, true);
+
+  // ── Estimated expiry records within 20 days (IPOPHL rules) ──
+  $expiringRecords = collect($allRecords)->filter(function($r) use ($hasExpiryStatus) {
+    if (!$hasExpiryStatus($r)) return false;
+    $type = strtolower(trim($r['type'] ?? ''));
+    $dc   = $r['date_creation']  ?? null;
+    $dr   = $r['registered']     ?? null;
+    $df   = $r['date_of_filing'] ?? null;
+    try {
+      $due = match($type) {
+        'patent'            => $dc ? \Carbon\Carbon::parse($dc)->addYears(20) : null,
+        'utility model'     => $dc ? \Carbon\Carbon::parse($dc)->addYears(7)  : null,
+        'industrial design' => $dc ? \Carbon\Carbon::parse($dc)->addYears(5)  : null,
+        'trademark'         => $dr ? \Carbon\Carbon::parse($dr)->addYears(10) : null,
+        'copyright'         => $df ? \Carbon\Carbon::parse($df)->addYears(50) : null,
+        default             => null,
+      };
+      if (!$due) return false;
+      $diff = (int)\Carbon\Carbon::today()->diffInDays($due, false);
+      return $diff >= 0 && $diff <= 20;
+    } catch(\Exception $e){ return false; }
+  })->map(function($r) {
+    $type = strtolower(trim($r['type'] ?? ''));
+    $dc   = $r['date_creation']  ?? null;
+    $dr   = $r['registered']     ?? null;
+    $df   = $r['date_of_filing'] ?? null;
+    try {
+      $due = match($type) {
+        'patent'            => $dc ? \Carbon\Carbon::parse($dc)->addYears(20) : null,
+        'utility model'     => $dc ? \Carbon\Carbon::parse($dc)->addYears(7)  : null,
+        'industrial design' => $dc ? \Carbon\Carbon::parse($dc)->addYears(5)  : null,
+        'trademark'         => $dr ? \Carbon\Carbon::parse($dr)->addYears(10) : null,
+        'copyright'         => $df ? \Carbon\Carbon::parse($df)->addYears(50) : null,
+        default             => null,
+      };
+      $daysLeft = $due ? (int)\Carbon\Carbon::today()->diffInDays($due, false) : null;
+      return array_merge($r, ['due_date' => $due?->format('M d, Y'), 'days_left' => $daysLeft]);
+    } catch(\Exception $e){ return array_merge($r, ['due_date' => '—', 'days_left' => null]); }
+  })->sortBy('days_left')->values()->all();
+
+  $expiringCount = count($expiringRecords);
+  $bellTotal     = $todayPending + $expiringCount;
 
   $total = max(1, count($allRecords));
   $statusCounts = collect($allRecords)->countBy('status')->sortDesc();
@@ -2155,25 +2199,55 @@
       </button>
 
       {{-- ── BELL BUTTON ── --}}
-      <div class="icon-btn" id="bellBtn" style="position:relative;" title="Today's Tasks">
+      <div class="icon-btn" id="bellBtn" style="position:relative;" title="Notifications">
         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" id="bellIcon">
           <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/>
         </svg>
-        @if($todayPending > 0)
-        <span class="bell-badge" id="bellBadge">{{ $todayPending }}</span>
+        @if($bellTotal > 0)
+        <span class="bell-badge" id="bellBadge">{{ $bellTotal }}</span>
         @endif
 
         {{-- NOTIFICATION DROPDOWN --}}
         <div class="notif-dropdown" id="notifDropdown">
           <div class="notif-drop-head">
             <div>
-              <div class="notif-drop-title">Today's Tasks</div>
+              <div class="notif-drop-title">Notifications</div>
               <div class="notif-drop-sub">{{ now()->format('l, F j, Y') }}</div>
             </div>
-            <span class="notif-drop-badge">{{ $todayTotal }} task{{ $todayTotal != 1 ? 's' : '' }}</span>
+            <span class="notif-drop-badge">{{ $bellTotal }} alert{{ $bellTotal != 1 ? 's' : '' }}</span>
           </div>
 
+          {{-- ── Estimated expiry records within 20 days ── --}}
+          @if($expiringCount > 0)
+          <div style="padding:8px 14px 4px;font-size:0.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#B91C1C;border-top:1px solid rgba(15,23,42,.06);">
+            Estimated Expiry Within 20 Days
+          </div>
+          <div class="notif-drop-list">
+            @foreach($expiringRecords as $rec)
+            @php
+              $daysLeft = $rec['days_left'] ?? null;
+              $urgency  = $daysLeft === 0 ? 'Estimated expiry today' : ($daysLeft === 1 ? 'Estimated expiry in 1 day' : "Estimated expiry in {$daysLeft} days");
+              $barColor = $daysLeft <= 3 ? 'background:#EF4444' : 'background:#F97316';
+            @endphp
+            <div class="notif-drop-item" style="cursor:default;">
+              <div class="notif-item-bar" style="{{ $barColor }};"></div>
+              <div style="flex:1;min-width:0;">
+                <div class="notif-item-title" style="font-size:0.75rem;">{{ $rec['title'] ?? $rec['ip_title'] ?? '—' }}</div>
+                <div style="font-size:0.65rem;color:#64748B;margin-top:2px;">{{ $rec['type'] ?? '—' }} · {{ $rec['id'] ?? $rec['record_id'] ?? '—' }}</div>
+              </div>
+              <span class="notif-item-pill" style="background:{{ $daysLeft <= 3 ? '#FEF2F2' : '#FFF7ED' }};color:{{ $daysLeft <= 3 ? '#B91C1C' : '#C2410C' }};font-size:0.6rem;white-space:nowrap;flex-shrink:0;">
+                {{ $urgency }}
+              </span>
+            </div>
+            @endforeach
+          </div>
+          @endif
+
+          {{-- ── Today's Tasks ── --}}
           @if($todayTotal > 0)
+          <div style="padding:8px 14px 4px;font-size:0.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#64748B;border-top:1px solid rgba(15,23,42,.06);">
+            Today's Tasks
+          </div>
           <div class="notif-drop-list">
             @foreach($todayTasks as $task)
             @php
@@ -2195,10 +2269,10 @@
               <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
             </button>
           </div>
-          @else
+          @elseif($expiringCount === 0)
           <div class="notif-drop-empty">
             <div style="font-size:1.6rem;margin-bottom:6px;">🎉</div>
-            No tasks scheduled for today.
+            No tasks today or registered records with estimated expiry soon.
           </div>
           @endif
         </div>
@@ -3571,8 +3645,8 @@
     },
     {
       target: 'bellBtn',
-      title:  "Today's Tasks",
-      desc:   'Click the bell to see tasks scheduled for today. A red badge appears when there are pending items that need your action.',
+      title:  'Notifications',
+      desc:   'Click the bell to see today\'s tasks and registered records with estimated expiry within the next 20 days. A red badge appears when there are pending alerts.',
     },
     {
       target: 'tutorialNewRecord',

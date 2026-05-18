@@ -239,6 +239,53 @@
       -webkit-tap-highlight-color: transparent;
     }
     .btn-howto:hover { background: var(--maroon-light); border-color: var(--maroon); color: var(--maroon); }
+
+    /* ── Bell / icon-btn ── */
+    .icon-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 38px; height: 38px; border-radius: 11px;
+      background: var(--bg); border: 1.5px solid var(--line);
+      color: var(--muted); cursor: pointer; flex-shrink: 0;
+      transition: background .18s, border-color .18s, color .18s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .icon-btn:hover { background: var(--maroon-light); border-color: var(--maroon); color: var(--maroon); }
+    .bell-badge {
+      position: absolute; top: -5px; right: -5px;
+      background: var(--maroon); color: #fff;
+      font-size: 0.55rem; font-weight: 800; line-height: 1;
+      min-width: 16px; height: 16px; padding: 0 3px;
+      border-radius: 99px; display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--card); pointer-events: none;
+    }
+    /* ── Notif dropdown ── */
+    .notif-dropdown {
+      display: none; position: absolute; top: calc(100% + 10px); right: 0;
+      width: 300px; background: var(--card); border: 1px solid var(--line);
+      border-radius: 16px; box-shadow: 0 12px 40px rgba(15,23,42,.14);
+      z-index: 120; overflow: hidden;
+    }
+    .notif-dropdown.open { display: block; }
+    .notif-drop-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px 10px; border-bottom: 1px solid var(--line);
+    }
+    .notif-drop-title { font-size: 0.78rem; font-weight: 800; color: var(--ink); }
+    .notif-drop-sub   { font-size: 0.62rem; color: var(--muted); margin-top: 1px; }
+    .notif-drop-badge {
+      font-size: 0.6rem; font-weight: 700; background: var(--maroon-light);
+      color: var(--maroon); border-radius: 99px; padding: 2px 8px; white-space: nowrap;
+    }
+    .notif-drop-list  { max-height: 260px; overflow-y: auto; padding: 6px 0; }
+    .notif-drop-item  {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 14px; transition: background .15s;
+    }
+    .notif-drop-item:hover { background: var(--bg); }
+    .notif-item-bar   { width: 3px; height: 36px; border-radius: 99px; flex-shrink: 0; }
+    .notif-item-title { font-size: 0.78rem; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .notif-item-pill  { font-size: 0.6rem; font-weight: 700; border-radius: 99px; padding: 2px 7px; }
+    .notif-drop-empty { padding: 20px 14px; text-align: center; font-size: 0.75rem; color: var(--muted); }
     .howto-overlay {
       position: fixed; inset: 0; z-index: 200;
       background: rgba(15,23,42,.6); backdrop-filter: blur(8px);
@@ -477,6 +524,7 @@
       cursor: pointer; position: relative;
       transition: background .15s;
       display: flex; flex-direction: column;
+      min-width: 0;
     }
     .day-cell:hover { background: rgba(165,44,48,.04); }
     .day-cell.other-month { background: rgba(241,244,249,.6); }
@@ -493,7 +541,7 @@
     }
     .day-cell.wknd-col .day-num { color: var(--maroon); }
 
-    .day-chips { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
+    .day-chips { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; min-width: 0; }
     .day-chip {
       font-size: .56rem; font-weight: 700;
       padding: 2px 6px; border-radius: 4px;
@@ -504,6 +552,8 @@
     .day-chip.cat-review      { background: var(--c-review-bg);     color: var(--c-review); }
     .day-chip.cat-submission  { background: var(--c-submission-bg); color: var(--c-submission); }
     .day-chip.done            { background: #eef0f3 !important; color: #a8b0bc !important; text-decoration: line-through; }
+    .day-chip.cat-expiry      { background: #FEF2F2; color: #B91C1C; border: 1px solid rgba(185,28,28,.15); }
+    .day-chip.cat-expiry-warn { background: #FFF7ED; color: #C2410C; border: 1px solid rgba(194,65,12,.15); }
 
     .day-more { font-size: .55rem; color: var(--muted); font-weight: 700; margin-top: 2px; }
 
@@ -727,7 +777,7 @@
     .mtask-pill.cat-submission  { background: var(--c-submission-bg); color: var(--c-submission); }
     .mtask-pill.done            { background: var(--c-done-bg);       color: var(--c-done); }
 
-    .mtask-title { font-size: .88rem; font-weight: 700; color: var(--ink); }
+    .mtask-title { font-size: .88rem; font-weight: 700; color: var(--ink); overflow-wrap: anywhere; }
     .mtask.is-done .mtask-title { text-decoration: line-through; color: var(--muted); }
     .mtask-meta { font-size: .68rem; color: var(--muted); margin-top: 3px; }
 
@@ -858,6 +908,11 @@
     }
     @media (max-width: 640px)  {
       .day-cell { min-height: 58px; padding: 5px; }
+      .day-chip { font-size: 0; width: 8px; height: 8px; padding: 0; border-radius: 999px; }
+      .day-more { font-size: .5rem; }
+      .cal-legend { gap: 8px 12px; padding: 10px 12px; }
+      .mtask { flex-wrap: wrap; }
+      .mark-done-btn { flex: 1 1 auto; justify-content: center; }
       .summary-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .btn-howto-label,
       .btn-today-label,
@@ -908,23 +963,31 @@
   $now    = \Carbon\Carbon::now();
   $mStart = $now->copy()->startOfMonth();
   $mEnd   = $now->copy()->endOfMonth();
+  $expiryStatuses = ['registered', 'close to expiry', 'close to expiration'];
+  $isExpiryRecord = fn($r) => in_array(strtolower(trim($r['status'] ?? '')), $expiryStatuses, true);
+  $hasRegistrationDate = fn($r) => !empty($r['registered']);
 
   $unregistered = collect($allRecords)
-      ->filter(fn($r) => strtolower($r['status'] ?? '') !== 'registered')->count();
+      ->filter(fn($r) => !$isExpiryRecord($r) && !$hasRegistrationDate($r))->count();
   $pending = collect($allTasks)
       ->filter(fn($t) => ($t['status'] ?? '') === 'pending')->count();
   $completed = collect($allTasks)
       ->filter(fn($t) => ($t['status'] ?? '') === 'done')->count();
 
   $deadlinesMonth = collect($allRecords)->filter(function($r) use ($mStart, $mEnd) {
-    if(empty($r['registered']) || empty($r['type'])) return false;
+    $status = strtolower(trim($r['status'] ?? ''));
+    if (!in_array($status, ['registered', 'close to expiry', 'close to expiration'], true)) return false;
+    $type = strtolower(trim($r['type'] ?? ''));
+    $dc   = $r['date_creation']  ?? null;
+    $dr   = $r['registered']     ?? null;
+    $df   = $r['date_of_filing'] ?? null;
     try {
-      $base = \Carbon\Carbon::parse($r['registered']);
-      $due  = match(strtolower(trim($r['type'] ?? ''))) {
-        'patent'            => $base->copy()->addYears(20),
-        'copyright'         => $base->copy()->addYears(70),
-        'utility model'     => $base->copy()->addYears(10),
-        'industrial design' => $base->copy()->addYears(15),
+      $due = match($type) {
+        'patent'            => $dc ? \Carbon\Carbon::parse($dc)->addYears(20) : null,
+        'utility model'     => $dc ? \Carbon\Carbon::parse($dc)->addYears(7)  : null,
+        'industrial design' => $dc ? \Carbon\Carbon::parse($dc)->addYears(5)  : null,
+        'trademark'         => $dr ? \Carbon\Carbon::parse($dr)->addYears(10) : null,
+        'copyright'         => $df ? \Carbon\Carbon::parse($df)->addYears(50) : null,
         default             => null,
       };
       return $due && $due->between($mStart, $mEnd);
@@ -1049,7 +1112,92 @@
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         <span class="btn-addtask-label">Add Task</span>
       </button>
-      
+
+      {{-- ── EXPIRY NOTIFICATION BELL ── --}}
+      @php
+        $calExpiringRecords = collect($allRecords)->filter(function($r) {
+          $status = strtolower(trim($r['status'] ?? ''));
+          if (!in_array($status, ['registered', 'close to expiry', 'close to expiration'], true)) return false;
+          $type = strtolower(trim($r['type'] ?? ''));
+          $dc   = $r['date_creation']  ?? null;
+          $dr   = $r['registered']     ?? null;
+          $df   = $r['date_of_filing'] ?? null;
+          try {
+            $due = match($type) {
+              'patent'            => $dc ? \Carbon\Carbon::parse($dc)->addYears(20) : null,
+              'utility model'     => $dc ? \Carbon\Carbon::parse($dc)->addYears(7)  : null,
+              'industrial design' => $dc ? \Carbon\Carbon::parse($dc)->addYears(5)  : null,
+              'trademark'         => $dr ? \Carbon\Carbon::parse($dr)->addYears(10) : null,
+              'copyright'         => $df ? \Carbon\Carbon::parse($df)->addYears(50) : null,
+              default             => null,
+            };
+            if (!$due) return false;
+            $diff = (int)\Carbon\Carbon::today()->diffInDays($due, false);
+            return $diff >= 0 && $diff <= 20;
+          } catch(\Exception $e){ return false; }
+        })->map(function($r) {
+          $type = strtolower(trim($r['type'] ?? ''));
+          $dc   = $r['date_creation']  ?? null;
+          $dr   = $r['registered']     ?? null;
+          $df   = $r['date_of_filing'] ?? null;
+          try {
+            $due = match($type) {
+              'patent'            => $dc ? \Carbon\Carbon::parse($dc)->addYears(20) : null,
+              'utility model'     => $dc ? \Carbon\Carbon::parse($dc)->addYears(7)  : null,
+              'industrial design' => $dc ? \Carbon\Carbon::parse($dc)->addYears(5)  : null,
+              'trademark'         => $dr ? \Carbon\Carbon::parse($dr)->addYears(10) : null,
+              'copyright'         => $df ? \Carbon\Carbon::parse($df)->addYears(50) : null,
+              default             => null,
+            };
+            $daysLeft = $due ? (int)\Carbon\Carbon::today()->diffInDays($due, false) : null;
+            return array_merge($r, ['due_date' => $due?->format('M d, Y'), 'days_left' => $daysLeft]);
+          } catch(\Exception $e){ return array_merge($r, ['due_date'=>'—','days_left'=>null]); }
+        })->sortBy('days_left')->values()->all();
+        $calExpiringCount = count($calExpiringRecords);
+      @endphp
+      <div class="icon-btn" id="calBellBtn" style="position:relative;" title="Estimated Expiry Alerts">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/>
+        </svg>
+        @if($calExpiringCount > 0)
+        <span class="bell-badge" id="calBellBadge">{{ $calExpiringCount }}</span>
+        @endif
+        <div class="notif-dropdown" id="calNotifDropdown">
+          <div class="notif-drop-head">
+            <div>
+              <div class="notif-drop-title">Estimated Expiry Alerts</div>
+              <div class="notif-drop-sub">Next 20 days</div>
+            </div>
+            <span class="notif-drop-badge">{{ $calExpiringCount }} record{{ $calExpiringCount != 1 ? 's' : '' }}</span>
+          </div>
+          @if($calExpiringCount > 0)
+          <div class="notif-drop-list">
+            @foreach($calExpiringRecords as $rec)
+            @php
+              $daysLeft = $rec['days_left'] ?? null;
+              $urgency  = $daysLeft === 0 ? 'Estimated expiry today' : ($daysLeft === 1 ? 'Estimated expiry in 1 day' : "Estimated expiry in {$daysLeft} days");
+              $barColor = $daysLeft <= 3 ? 'background:#EF4444' : 'background:#F97316';
+            @endphp
+            <div class="notif-drop-item" style="cursor:default;">
+              <div class="notif-item-bar" style="{{ $barColor }};"></div>
+              <div style="flex:1;min-width:0;">
+                <div class="notif-item-title" style="font-size:0.75rem;">{{ $rec['title'] ?? $rec['ip_title'] ?? '—' }}</div>
+                <div style="font-size:0.65rem;color:#64748B;margin-top:2px;">{{ $rec['type'] ?? '—' }} · {{ $rec['id'] ?? $rec['record_id'] ?? '—' }}</div>
+              </div>
+              <span class="notif-item-pill" style="background:{{ $daysLeft <= 3 ? '#FEF2F2' : '#FFF7ED' }};color:{{ $daysLeft <= 3 ? '#B91C1C' : '#C2410C' }};font-size:0.6rem;white-space:nowrap;flex-shrink:0;">
+                {{ $urgency }}
+              </span>
+            </div>
+            @endforeach
+          </div>
+          @else
+          <div class="notif-drop-empty">
+            <div style="font-size:1.6rem;margin-bottom:6px;">✅</div>
+            No records with estimated expiry in the next 20 days.
+          </div>
+          @endif
+        </div>
+      </div>
     </div>
   </header>
 
@@ -1066,7 +1214,7 @@
         </div>
         <div>
           <div class="sum-num" id="sumDeadlines">{{ $deadlinesMonth }}</div>
-          <div class="sum-label">Deadlines This Month</div>
+          <div class="sum-label">Expiries This Month</div>
         </div>
       </div>
 
@@ -1077,8 +1225,8 @@
           </svg>
         </div>
         <div>
-          <div class="sum-num">{{ $unregistered }}</div>
-          <div class="sum-label">Unregistered Records</div>
+          <div class="sum-num" id="sumUnregistered">{{ $unregistered }}</div>
+          <div class="sum-label">Not Yet Registered</div>
         </div>
       </div>
 
@@ -1144,6 +1292,7 @@
           <div class="legend-item"><div class="legend-pip" style="background:var(--c-reg)"></div>Registration</div>
           <div class="legend-item"><div class="legend-pip" style="background:var(--c-review)"></div>Review</div>
           <div class="legend-item"><div class="legend-pip" style="background:var(--c-submission)"></div>Submission</div>
+          <div class="legend-item"><div class="legend-pip" style="background:#EF4444"></div>Expiry</div>
           <div class="legend-item"><div class="legend-pip" style="background:#bcc4ce"></div>Completed</div>
         </div>
       </div>
@@ -1314,7 +1463,7 @@
         <div class="howto-step-num">07</div>
         <div class="howto-step-body">
           <div class="howto-step-title">Summary Strip</div>
-          <div class="howto-step-desc">The four cards at the top show: <strong>Deadlines This Month</strong>, <strong>Unregistered Records</strong>, <strong>Pending Tasks</strong>, and <strong>Completed Tasks</strong>. Pending and Completed update live as you add or complete tasks.</div>
+          <div class="howto-step-desc">The four cards at the top show: <strong>Expiries This Month</strong>, <strong>Not Yet Registered</strong>, <strong>Pending Tasks</strong>, and <strong>Completed Tasks</strong>. Pending and Completed update live as you add or complete tasks.</div>
           <span class="howto-step-tag">Top → Summary Cards</span>
         </div>
       </div>
@@ -1373,6 +1522,73 @@ const API    = {
 
 // Seed tasks from PHP (avoids an extra API call on first paint)
 let tasks = @json(array_values($allTasks));
+
+// All IP records for expiry chip rendering
+const ALL_RECORDS = @json(array_values($allRecords));
+
+// ── IPOPHL expiry computation ──
+function hasExpiryStatus(r) {
+  const status = String(r.status || '').trim().toLowerCase();
+  return status === 'registered' || status === 'close to expiry' || status === 'close to expiration';
+}
+
+function isNotYetRegistered(r) {
+  return !hasExpiryStatus(r) && !r.registered;
+}
+
+function getExpiryDate(r) {
+  if (!hasExpiryStatus(r)) return null;
+  const type = (r.type || r.category || '').toLowerCase().trim();
+  const dc   = r.date_creation  || null;
+  const dr   = r.registered     || null;
+  const df   = r.date_of_filing || null;
+  let base = null, years = null;
+  if      (type === 'patent')            { base = dc; years = 20; }
+  else if (type === 'utility model')     { base = dc; years = 7;  }
+  else if (type === 'industrial design') { base = dc; years = 5;  }
+  else if (type === 'trademark')         { base = dr; years = 10; }
+  else if (type === 'copyright')         { base = df; years = 50; }
+  if (!base || !years) return null;
+  try {
+    const d = new Date(base);
+    if (isNaN(d)) return null;
+    d.setFullYear(d.getFullYear() + years);
+    return d;
+  } catch(e) { return null; }
+}
+
+// Pre-compute expiry dates once
+const RECORD_EXPIRIES = ALL_RECORDS.map(r => ({
+  ...r,
+  _expiry: getExpiryDate(r),
+})).filter(r => r._expiry !== null);
+
+// Get records expiring on a specific ISO date string
+function getExpiriesOnDate(iso) {
+  return RECORD_EXPIRIES.filter(r => {
+    const d = r._expiry;
+    const pad = n => String(n).padStart(2,'0');
+    const dISO = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    return dISO === iso;
+  });
+}
+
+// Get records expiring within N days from today
+function getExpiriesWithinDays(n) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const limit = new Date(today); limit.setDate(limit.getDate() + n);
+  return RECORD_EXPIRIES.filter(r => {
+    const d = new Date(r._expiry); d.setHours(0,0,0,0);
+    return d >= today && d <= limit;
+  }).sort((a,b) => a._expiry - b._expiry);
+}
+
+function countExpiriesInMonth(year, month) {
+  return RECORD_EXPIRIES.filter(r => {
+    const d = r._expiry;
+    return d && d.getFullYear() === year && d.getMonth() === month;
+  }).length;
+}
 
 let CY, CM;
 let activeDayISO = null;
@@ -1476,24 +1692,36 @@ function renderCal(year, month){
     numInner.textContent=cd; numWrap.appendChild(numInner); cell.appendChild(numWrap);
 
     // Match tasks by task_date field
-    const dayTasks = tasks.filter(t => (t.task_date||'').slice(0,10) === iso);
-    if(dayTasks.length){
+    const dayTasks   = tasks.filter(t => (t.task_date||'').slice(0,10) === iso);
+    const dayExpiries = getExpiriesOnDate(iso);
+    if(dayTasks.length || dayExpiries.length){
       const chips=document.createElement('div'); chips.className='day-chips';
-      dayTasks.slice(0,3).forEach(t=>{
+      // Expiry chips first — most urgent
+      dayExpiries.slice(0,2).forEach(r=>{
+        const chip=document.createElement('div');
+        chip.className='day-chip cat-expiry';
+        chip.textContent='Expiry: '+(r.title||r.ip_title||r.id||'Record');
+        chip.title=`${r.type||''} · ${r.id||r.record_id||''} expires today`;
+        chips.appendChild(chip);
+      });
+      dayTasks.slice(0, Math.max(0, 3 - dayExpiries.slice(0,2).length)).forEach(t=>{
         const chip=document.createElement('div');
         const isDone = t.status === 'done';
         chip.className='day-chip '+(isDone?'done':(CAT_CSS[t.category]||'cat-deadline'));
         chip.textContent=t.title; chips.appendChild(chip);
       });
-      if(dayTasks.length>3){
+      const totalShown = Math.min(2, dayExpiries.length) + Math.min(3-Math.min(2,dayExpiries.length), dayTasks.length);
+      const totalAll   = dayExpiries.length + dayTasks.length;
+      if(totalAll > totalShown){
         const more=document.createElement('div'); more.className='day-more';
-        more.textContent=`+${dayTasks.length-3} more`; chips.appendChild(more);
+        more.textContent=`+${totalAll-totalShown} more`; chips.appendChild(more);
       }
       cell.appendChild(chips);
     }
     cell.addEventListener('click',()=>openDay(iso));
     grid.appendChild(cell);
   }
+  syncCounters();
 }
 
 /* ══════════════════════════════════════════════
@@ -1513,11 +1741,13 @@ function openDay(iso){
   const [y,m,d] = iso.split('-').map(Number);
   const dateObj  = new Date(y,m-1,d);
   const label    = dateObj.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-  const dt       = tasks.filter(t=>(t.task_date||'').slice(0,10)===iso);
+  const dt        = tasks.filter(t=>(t.task_date||'').slice(0,10)===iso);
+  const expiries  = getExpiriesOnDate(iso);
+  const totalItems = dt.length + expiries.length;
 
   document.getElementById('dayModalTitle').textContent = label;
-  document.getElementById('dayModalCount').textContent = dt.length
-    ? `${dt.length} task${dt.length>1?'s':''} · ${dt.filter(t=>t.status==='done').length} completed`
+  document.getElementById('dayModalCount').textContent = totalItems
+    ? `${dt.length} task${dt.length!==1?'s':''} · ${expiries.length} expir${expiries.length!==1?'ies':'y'} · ${dt.filter(t=>t.status==='done').length} completed`
     : 'No tasks scheduled';
 
   renderDayBody(iso);
@@ -1528,9 +1758,10 @@ function openDay(iso){
 
 function renderDayBody(iso){
   const body = document.getElementById('dayModalBody');
-  const dt   = tasks.filter(t=>(t.task_date||'').slice(0,10)===iso);
+  const dt         = tasks.filter(t=>(t.task_date||'').slice(0,10)===iso);
+  const dayExpiries = getExpiriesOnDate(iso);
 
-  if(!dt.length){
+  if(!dt.length && !dayExpiries.length){
     body.innerHTML=`<div class="modal-empty">
       <div class="modal-empty-icon">&#128219;</div>
       No tasks for this day.<br>
@@ -1539,7 +1770,27 @@ function renderDayBody(iso){
     return;
   }
 
-  body.innerHTML = dt.map(t=>{
+  // Expiry records section
+  const expiryHTML = dayExpiries.length ? `
+    <div style="font-size:0.62rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#B91C1C;padding:8px 0 6px;">
+      ⚠ IP Protection Expiring Today
+    </div>
+    ${dayExpiries.map(r => `
+    <div class="mtask" style="border-left:3px solid #EF4444;background:#FEF2F2;">
+      <div class="mtask-bar" style="background:#EF4444;"></div>
+      <div class="mtask-body">
+        <div class="mtask-top">
+          <span class="mtask-pill" style="background:#FEE2E2;color:#B91C1C;">Expired</span>
+          <span style="font-size:0.65rem;color:#64748B;margin-left:6px;">${esc(r.id||r.record_id||'')}</span>
+        </div>
+        <div class="mtask-title">${esc(r.title||r.ip_title||'—')}</div>
+        <div class="mtask-meta">${esc(r.type||'—')} · Protection ends today</div>
+      </div>
+    </div>`).join('')}
+  ` : '';
+
+  // Task records section
+  const tasksHTML = dt.length ? dt.map(t=>{
     const isDone = t.status === 'done';
     const cc  = isDone ? 'done' : (CAT_CSS[t.category]||'cat-deadline');
     const lbl = isDone ? 'Completed' : (CAT_LABEL[t.category]||t.category);
@@ -1566,7 +1817,9 @@ function renderDayBody(iso){
         </svg>
       </button>
     </div>`;
-  }).join('');
+  }).join('') : '';
+
+  body.innerHTML = expiryHTML + tasksHTML;
 
   /* Mark Done */
   body.querySelectorAll('.mark-done-btn:not([disabled])').forEach(btn=>{
@@ -1700,6 +1953,19 @@ document.getElementById('addTaskTopBtn').addEventListener('click',()=>{
   setTimeout(()=>document.getElementById('ftTitle').focus(),300);
 });
 
+/* ── Calendar bell notification toggle ── */
+const calBellBtn      = document.getElementById('calBellBtn');
+const calNotifDropdown = document.getElementById('calNotifDropdown');
+if(calBellBtn && calNotifDropdown){
+  calBellBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    calNotifDropdown.classList.toggle('open');
+  });
+  document.addEventListener('click', e => {
+    if(!calBellBtn.contains(e.target)) calNotifDropdown.classList.remove('open');
+  });
+}
+
 /* ══════════════════════════════════════════════
    RECENT LIST
 ══════════════════════════════════════════════ */
@@ -1742,8 +2008,10 @@ function renderRecent(){
 ══════════════════════════════════════════════ */
 function syncCounters(){
   const el = id=>document.getElementById(id);
-  if(el('sumPending')) el('sumPending').textContent = tasks.filter(t=>t.status!=='done').length;
-  if(el('sumDone'))    el('sumDone').textContent    = tasks.filter(t=>t.status==='done').length;
+  if(el('sumDeadlines'))    el('sumDeadlines').textContent    = countExpiriesInMonth(CY, CM);
+  if(el('sumUnregistered')) el('sumUnregistered').textContent = ALL_RECORDS.filter(isNotYetRegistered).length;
+  if(el('sumPending'))      el('sumPending').textContent      = tasks.filter(t=>t.status==='pending').length;
+  if(el('sumDone'))         el('sumDone').textContent         = tasks.filter(t=>t.status==='done').length;
 }
 
 /* ══════════════════════════════════════════════
@@ -1940,7 +2208,7 @@ window.KTTMCalendarTutorialApi = {
     {
       target: 'tutorialCalendarSummary',
       title: 'Summary Strip',
-      desc: 'These cards summarize the page at a glance: deadlines due this month, records still unregistered, pending tasks, and completed tasks. Pending and completed totals update live when you change tasks.',
+      desc: 'These cards summarize the page at a glance: registered expiries due this month, records not yet registered, pending tasks, and completed tasks. Pending and completed totals update live when you change tasks.',
     },
     {
       target: 'tutorialCalendarMonthNav',
@@ -1955,7 +2223,7 @@ window.KTTMCalendarTutorialApi = {
     {
       target: 'tutorialCalendarLegend',
       title: 'Legend and Colors',
-      desc: 'This key explains the chip colors used throughout the page: deadline, registration, review, submission, and completed. The same colors appear in the grid, recent list, and day modal.',
+      desc: 'This key explains the chip colors used throughout the page: deadline, registration, review, submission, expiry, and completed. The same colors appear in the grid, recent list, and day modal.',
     },
     {
       target: 'addTaskPanel',

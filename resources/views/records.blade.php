@@ -1350,7 +1350,7 @@
                 <th data-col="dateoffiling">Date of Filing</th>
                 <th data-col="datecreated">Date Created</th>
                 <th data-col="registered">Registered</th>
-                <th data-col="nextdue">Next Due</th>
+                <th data-col="nextdue">Estimated Next Due</th>
                 <th data-col="validity">Validity</th>
                 <th data-col="regnumber">Reg. Number</th>
                 <th data-col="gdrive" style="min-width:160px;">GDrive</th>
@@ -1376,31 +1376,36 @@
                   $link        = $r['gdrive_link']    ?? null;
                   $due         = '—'; $validity = '—';
                   $typeKey     = strtolower(trim($r['type'] ?? ''));
+                  $hasExpiry   = in_array($s, ['Registered', 'Close to Expiry'], true);
 
-                  switch($typeKey){
-                    case 'patent':
-                      // 20 years from date_creation (Date Patented/Submitted = filing date)
-                      $base = $dc ?? $dr ?? null;
-                      if($base){ $date = \Carbon\Carbon::parse($base); $due = $date->copy()->addYears(20)->format('M d, Y'); $validity = '20 yrs'; }
-                      break;
-                    case 'utility model':
-                      // 7 years from date_creation (Date Filed/Submitted)
-                      $base = $dc ?? $dr ?? null;
-                      if($base){ $date = \Carbon\Carbon::parse($base); $due = $date->copy()->addYears(7)->format('M d, Y'); $validity = '7 yrs'; }
-                      break;
-                    case 'industrial design':
-                      // 5 years from date_creation (Date Filed/Submitted), renewable twice (max 15)
-                      $base = $dc ?? $dr ?? null;
-                      if($base){ $date = \Carbon\Carbon::parse($base); $due = $date->copy()->addYears(5)->format('M d, Y'); $validity = '5 yrs (max 15)'; }
-                      break;
-                    case 'trademark':
-                      // 10 years from registration date, renewable
-                      if($dr){ $date = \Carbon\Carbon::parse($dr); $due = $date->copy()->addYears(10)->format('M d, Y'); $validity = '10 yrs'; }
-                      break;
-                    case 'copyright':
-                      // Life of author + 50 years — no computable expiry
-                      $validity = 'Life+50 yrs'; $due = '—';
-                      break;
+                  if($hasExpiry){
+                    switch($typeKey){
+                      case 'patent':
+                        // 20 years from date_creation (Date Patented/Submitted = filing date)
+                        $base = $dc ?? $dr ?? null;
+                        if($base){ $date = \Carbon\Carbon::parse($base); $due = $date->copy()->addYears(20)->format('M d, Y'); $validity = '20 yrs'; }
+                        break;
+                      case 'utility model':
+                        // 7 years from date_creation (Date Filed/Submitted)
+                        $base = $dc ?? $dr ?? null;
+                        if($base){ $date = \Carbon\Carbon::parse($base); $due = $date->copy()->addYears(7)->format('M d, Y'); $validity = '7 yrs'; }
+                        break;
+                      case 'industrial design':
+                        // 5 years from date_creation (Date Filed/Submitted), renewable twice (max 15)
+                        $base = $dc ?? $dr ?? null;
+                        if($base){ $date = \Carbon\Carbon::parse($base); $due = $date->copy()->addYears(5)->format('M d, Y'); $validity = '5 yrs (max 15)'; }
+                        break;
+                      case 'trademark':
+                        // 10 years from registration date, renewable
+                        if($dr){ $date = \Carbon\Carbon::parse($dr); $due = $date->copy()->addYears(10)->format('M d, Y'); $validity = '10 yrs'; }
+                        break;
+                      case 'copyright':
+                        // 50 years from date_of_filing (creation date) per IPOPHL
+                        // If no creation date available, due date cannot be computed
+                        if($df){ $date = \Carbon\Carbon::parse($df); $due = $date->copy()->addYears(50)->format('M d, Y'); $validity = '50 yrs from creation'; }
+                        else { $validity = '50 yrs from creation'; $due = '—'; }
+                        break;
+                    }
                   }
                 @endphp
                 <tr class="record-row" data-remarks="{{ addslashes($r['remarks'] ?? '') }}"
@@ -1408,7 +1413,7 @@
                   <td class="record-id-cell record-id">{{ $r['id'] ?? '—' }}</td>
                   <td data-col="title" class="record-title-cell record-title"><div class="title-text" title="{{ $r['title'] ?? '—' }}">{{ $r['title'] ?? '—' }}</div></td>
                   <td data-col="category" class="record-type" style="white-space:nowrap;">{{ $r['type'] ?? '—' }}</td>
-                  <td data-col="owner" class="record-owner" title="{{ $r['owner_inventor'] ?? '—' }}">{!! implode('<br>', array_map('trim', explode(',', e($r['owner_inventor'] ?? '—')))) !!}</td>
+                  <td data-col="owner" class="record-owner" title="{{ $r['owner_inventor'] ?? '—' }}" data-owner="{{ $r['owner_inventor'] ?? '' }}">{!! implode('<br>', array_map('trim', explode(',', e($r['owner_inventor'] ?? '—')))) !!}</td>
                   <td data-col="campus" class="record-campus" style="white-space:nowrap;">{{ $r['campus'] ?? '—' }}</td>
                   <td data-col="college" class="record-college">{{ $r['college'] ?? '—' }}</td>
                   <td data-col="program" class="record-program">{{ $r['program'] ?? '—' }}</td>
@@ -2072,11 +2077,16 @@
     const reg = rawReg ? new Date(rawReg).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'2-digit'}) : '—';
     const typeLow = (r.category || r.type || '').toLowerCase().trim();
     let due = '—', validity = '—';
+    const displayStatus = r.status === 'Recently Filed' ? 'Filed' : (r.status || '');
+    const hasExpiry = displayStatus === 'Registered' || displayStatus === 'Close to Expiry';
     // Patent/UM/Design use date_creation (= Date Patented/Submitted/Filed)
-    // Trademark uses date_registered, Copyright has no computable expiry
+    // Trademark uses date_registered; other types use their filing/creation base date.
     const baseForFiling = rawCreated || rawReg;
     try {
-      if (typeLow === 'patent') {
+      if (!hasExpiry) {
+        due = '—';
+        validity = '—';
+      } else if (typeLow === 'patent') {
         if (baseForFiling) { const d=new Date(baseForFiling); d.setFullYear(d.getFullYear()+20); due=d.toLocaleDateString(); }
         validity = '20 yrs';
       } else if (typeLow === 'utility model') {
@@ -2089,10 +2099,11 @@
         if (rawReg) { const d=new Date(rawReg); d.setFullYear(d.getFullYear()+10); due=d.toLocaleDateString(); }
         validity = '10 yrs';
       } else if (typeLow === 'copyright') {
-        validity = 'Life+50 yrs'; due = '—';
+        // 50 years from date_of_filing (creation date) per IPOPHL
+        if (rawFiling) { const d=new Date(rawFiling); d.setFullYear(d.getFullYear()+50); due=d.toLocaleDateString('en-US',{year:'numeric',month:'short',day:'2-digit'}); }
+        validity = '50 yrs from creation';
       }
     } catch(e) {}
-    const displayStatus = r.status === 'Recently Filed' ? 'Filed' : (r.status || '');
     const badgeMap={'Registered':'status-registered','Under Review':'status-review','Filed':'status-filed','Needs Attention':'status-attention','Returned':'status-returned'};
     const bc=badgeMap[displayStatus]||'status-default';
     const id=esc(r.record_id||r.id||''); const title=esc(r.ip_title||r.title||''); const ownerText=esc(r.owner_inventor||r.owner||'');
@@ -2105,7 +2116,7 @@
       <td class="record-id-cell record-id">${id}</td>
       <td data-col="title" class="record-title-cell record-title"><div class="title-text" title="${title}">${title}</div></td>
       <td data-col="category" class="record-type" style="white-space:nowrap;font-size:.78rem;">${esc(r.category||r.type||'—')}</td>
-      <td data-col="owner" class="record-owner" style="font-size:.78rem;" title="${ownerText}">${(r.owner_inventor||r.owner||'').split(',').map(s=>esc(s.trim())).join('<br>')}</td>
+      <td data-col="owner" class="record-owner" style="font-size:.78rem;" title="${ownerText}" data-owner="${ownerText}">${(r.owner_inventor||r.owner||'').split(',').map(s=>esc(s.trim())).join('<br>')}</td>
       <td data-col="campus" class="record-campus" style="white-space:nowrap;font-size:.78rem;">${esc(r.campus||'')}</td>
       <td data-col="college" style="white-space:nowrap;font-size:.75rem;color:var(--muted);">${esc(r.college||'—')}</td>
       <td data-col="program" style="white-space:nowrap;font-size:.75rem;color:var(--muted);">${esc(r.program||'—')}</td>
@@ -2221,7 +2232,7 @@
       dateoffiling:'Date of Filing',
       datecreated: 'Date Created',
       registered:  'Date Registered/Deposited',
-      nextdue:     'Next Due',
+      nextdue:     'Estimated Next Due',
       validity:    'Validity',
       gdrive:      'GDrive',
       remarks:     'Remarks',
@@ -2235,7 +2246,7 @@
       status:      'Status',
       datecreated: 'Date Patented/Submitted',
       registered:  'Registration Date',
-      nextdue:     'Next Due',
+      nextdue:     'Estimated Next Due',
       validity:    'Validity',
       gdrive:      'GDrive',
       remarks:     'Remarks',
@@ -2248,7 +2259,7 @@
       status:      'Status',
       datecreated: 'Filing Date',
       registered:  'Registration Date',
-      nextdue:     'Next Due',
+      nextdue:     'Estimated Next Due',
       validity:    'Validity',
       gdrive:      'GDrive',
       remarks:     'Remarks',
@@ -2271,7 +2282,7 @@
     status:      'Status',
     datecreated: 'Date Created',
     registered:  'Registered',
-    nextdue:     'Next Due',
+    nextdue:     'Estimated Next Due',
     validity:    'Validity',
     regnumber:   'Reg. Number',
     gdrive:      'GDrive',
@@ -2356,7 +2367,7 @@
     if(isModal){
       const c=row.querySelectorAll('td');
       id=(c[0]?.textContent||'').trim(); title=(c[1]?.textContent||'').trim();
-      type=(c[2]?.textContent||'').trim(); owner=(c[3]?.textContent||'').trim();
+      type=(c[2]?.textContent||'').trim(); owner=(c[3]?.dataset.owner||c[3]?.getAttribute('title')||c[3]?.textContent||'').trim();
       campus=(c[4]?.textContent||'').trim(); status=(c[5]?.textContent||'').trim();
       reg=(c[6]?.textContent||'').trim(); ipophl=(c[9]?.textContent||'').trim();
       gdrive=(c[10]?.querySelector('a')?.href||'').trim();
@@ -2364,7 +2375,8 @@
       id=(row.querySelector('.record-id')?.textContent||'').trim();
       title=(row.querySelector('.record-title .title-text')?.textContent||row.querySelector('.record-title')?.textContent||'').trim();
       type=(row.querySelector('.record-type')?.textContent||'').trim();
-      owner=(row.querySelector('.record-owner')?.textContent||'').trim();
+      const ownerCell = row.querySelector('.record-owner');
+      owner=(ownerCell?.dataset.owner||ownerCell?.getAttribute('title')||ownerCell?.textContent||'').trim();
       campus=(row.querySelector('.record-campus')?.textContent||'').trim();
       status=(row.querySelector('.record-status span')?.textContent||'').trim();
       reg=(row.querySelector('.record-registered')?.textContent||'').trim();

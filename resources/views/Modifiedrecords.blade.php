@@ -1345,11 +1345,14 @@
     if(!changes) return [];
     if(typeof changes==='string'){ try{ changes=JSON.parse(changes); }catch(e){ return []; } }
     if(typeof changes!=='object') return [];
-    return Object.entries(changes).map(([field, v]) => ({
-      field,
-      old: (v && typeof v==='object') ? v.old : undefined,
-      new: (v && typeof v==='object') ? v.new : undefined,
-    }));
+    const ownerKey = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+    return Object.entries(changes)
+      .map(([field, v]) => ({
+        field,
+        old: (v && typeof v==='object') ? v.old : undefined,
+        new: (v && typeof v==='object') ? v.new : undefined,
+      }))
+      .filter(c => String(c.field).toLowerCase() !== 'owner' || ownerKey(c.old) !== ownerKey(c.new));
   }
 
   function matchesSearch(evt, needle){
