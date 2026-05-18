@@ -11,3 +11,12 @@ git branch -M main
 git status
 
 git pull origin main --allow-unrelated-histories
+
+
+git status
+
+git add .
+
+git commit -m "Merged local files with GitHub repository"
+
+git pull origin main --allow-unrelated-histories
